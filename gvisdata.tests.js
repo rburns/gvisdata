@@ -272,6 +272,13 @@ test('DataTable.tableDescriptionParser',function(){
 	//], 'depth 2 ambiguous object property in object/array definition');
 });
 
+test('appendData',function(){
+	// We check a few examples where the format of the data does not match the
+	// description and then a few valid examples. The test for the content itself
+	// is done inside the toJSCode and toJSon functions.
+	var table = new DataTable([("a", "number"), ("b", "string")]);
+});
+
 /** 
  * The following tests are not part of the Python test suite
  */
@@ -281,14 +288,14 @@ test('type detection',function(){
 
 	ok(_t.isObject({}), 'Object literal is an object');
 	equal(_t.isString({}), false, 'Object literal is not a string');		
-
+	equal(_t.isArray({}), false, 'Object literal is not an array');		
+	
 	ok(_t.isString(new String('test')), 'String object is a string');
 	ok(_t.isString('test'), 'String literal is a string');
 
 	ok(_t.isArray(new Array()), 'Array object is an array');
 	ok(_t.isArray([]), 'Array literal is an array');
-	equal(_t.isArray({}), false, 'Object literal is not an array');		
-	
+
 	ok(_t.isDate(new Date()), 'Date object is a date');
 
 	equal(_t.type({}), 'object', 'type of object literal');		
