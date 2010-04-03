@@ -391,7 +391,7 @@ test('toJSCode - extra',function(){
 			"mytab.setCell(2, 0, 'three');\n"+
 			"mytab.setCell(2, 1, 'two');\n"+
 			"mytab.setCell(2, 2, 'one');\n")
-		,'Outputs correct Javascript representation');
+		,'Outputs correct Javascript representation with column ordering');
 });
 
 test('type detection',function(){
