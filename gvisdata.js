@@ -1,3 +1,5 @@
+var puts = require('sys').puts;
+var inspect = require('sys').inspect;
 /**
  * Wraps the data to convert to a Google Visualization API DataTable.
  *
@@ -96,16 +98,26 @@
  *                       or did not use the supported formats.
  */
 function DataTable(tableDescription, data, customProperties) {
-	this._columns = DataTable.tableDescriptionParser(tableDescription);
-	this._data = [];
-	this.customProperties = {};
-
-	if( arguments.length > 2 && customProperties != null ) {
-		this.custom_properties = customProperties;
-	}
-	if( arguments.length > 1 && data != null ) {
-		this.LoadData(data);
-	}
+	/**
+	 * Loads new rows to the data table, clearing existing rows.
+	 * 
+	 * May also set the custom_properties for the added rows. The given custom
+	 * properties dictionary specifies the dictionary that will be used for *all*
+	 * given rows.
+	 * 
+	 * Args:
+	 *   data: The rows that the table will contain.
+	 *   custom_properties: A dictionary of string to string to set as the custom
+	 *                      properties for all rows.
+	 */
+	this.loadData = function(data, customProperties) {
+		if( arguments.length > 1 ) {
+			this.custom_properties = customProperties;
+		}
+		
+		this._data = [];
+		this.appendData(data, this.customProperties);
+	};
 
 	/**
 	 * Appends new data to the table.
@@ -210,6 +222,172 @@ function DataTable(tableDescription, data, customProperties) {
 	this.numberOfRows = function() {
 		return this._data.length;
 	};
+
+	/**
+	 * Prepares the data for enumeration - sorting it by order_by.
+	 * 
+	 * Args:
+	 *   order_by: Optional. Specifies the name of the column(s) to sort by, and
+	 *             (optionally) which direction to sort in. Default sort direction
+	 *             is asc. Following formats are accepted:
+	 *             "string_col_name"  -- For a single key in default (asc) order.
+	 *             ("string_col_name", "asc|desc") -- For a single key.
+	 *             [("col_1","asc|desc"), ("col_2","asc|desc")] -- For more than
+	 *                 one column, an array of tuples of (col_name, "asc|desc").
+	 * 
+	 * Returns:
+	 *   The data sorted by the keys given.
+	 * 
+	 * Raises:
+	 *   DataTableException: Sort direction not in 'asc' or 'desc'
+	 */
+	this.preparedData = function(orderBy) {
+		if( arguments.length == 0 || orderBy == null ) { orderBy = [] }
+
+		if( !(orderBy.length) ) { return this._data; }
+
+		properSortKeys = [];
+		if( DataTable._t.isString(orderBy) ||
+			(DataTable._t.isArray(orderBy && orderBy.length == 2) &&
+			(orderBy[1].toLowerCase() == 'asc' || orderBy[1].toLowerCase() == 'desc')) ) {
+			orderBy = [orderBy,];
+		}
+		for( i in orderBy ) {
+			if( DataTable._t.isString(orderBy[i]) ) {
+				properSortKeys.push([orderBy[i], 1]);
+			} else if(DataTable._t.isArray(orderBy && orderBy.length == 2) &&
+				(orderBy[1].toLowerCase() == 'asc' || orderBy[1].toLowerCase() == 'desc')) {
+				properSortKeys.push([orderBy[0], orderBy[1].lower() == 'asc' ? 1 : -1]);
+			} else {
+				throw 'Expected tuple with second value: \'asc\' or \'desc\'';
+			}			
+		}
+
+		return this._data.sort(function(row1,row2){
+      		for( i in properSortKeys ) {
+      			var key = properSortKeys[0],
+      				ascMult = properSortKeys[1];
+        		cmpResult = ascMult * (row1[0][key] > row2[0][key] ? 1 : -1);
+        		if( cmpResult ) { return cmp_result; }
+        	}
+      		return 0;
+		});
+	};
+
+	/**
+	 * Writes the data table as a JS code string.
+	 * 
+	 * This method writes a string of JS code that can be run to
+	 * generate a DataTable with the specified data. Typically used for debugging
+	 * only.
+	 * 
+	 * Args:
+	 *   name: The name of the table. The name would be used as the DataTable's
+	 *         variable name in the created JS code.
+	 *   columns_order: Optional. Specifies the order of columns in the
+	 *                  output table. Specify a list of all column IDs in the order
+	 *                  in which you want the table created.
+	 *                  Note that you must list all column IDs in this parameter,
+	 *                  if you use it.
+	 *   order_by: Optional. Specifies the name of the column(s) to sort by.
+	 *             Passed as is to _PreparedData.
+	 * 
+	 * Returns:
+	 *   A string of JS code that, when run, generates a DataTable with the given
+	 *   name and the data stored in the DataTable object.
+	 *   Example result:
+	 *     "var tab1 = new google.visualization.DataTable();
+	 *      tab1.addColumn('string', 'a', 'a');
+	 *      tab1.addColumn('number', 'b', 'b');
+	 *      tab1.addColumn('boolean', 'c', 'c');
+	 *      tab1.addRows(10);
+	 *      tab1.setCell(0, 0, 'a');
+	 *      tab1.setCell(0, 1, 1, null, {'foo': 'bar'});
+	 *      tab1.setCell(0, 2, true);
+	 *      ...
+	 *       tab1.setCell(9, 0, 'c');
+	 *      tab1.setCell(9, 1, 3, '3$');
+	 *      tab1.setCell(9, 2, false);"
+	 * 
+	 * Raises:
+	 *   DataTableException: The data does not match the type.
+	 */
+	this.toJSCode = function(name, columnOrder, orderBy) {
+		if( arguments.length == 1 || columnOrder == null ) {
+			columnOrder = [];
+			for( i in this._columns ) {	columnOrder.push(this._columns[i].id); }
+		}
+		colDict = {};
+		for( i in this._columns ) { colDict[this._columns[i].id] = this._columns[i]; }
+		
+		// We first create the table with the given name
+		var jscode = 'var '+name+' = new google.visualization.DataTable();\n';
+		if( this.customProperties.length ) {
+			var props = DataTable._escapeCustomProperties(this.customProperties);
+			jscode += name+'.setTableProperties('+props+');\n';
+		}
+		
+		// We add the columns to the table
+		for( i in columnOrder ) {
+			var col = columnOrder[i],
+				type = colDict[col].type,
+          		label = DataTable._escapeValue(colDict[col].label),
+          		id = DataTable._escapeValue(colDict[col].id);
+
+			jscode += name+".addColumn('"+type+"', "+label+", "+id+");\n";
+			
+			if( colDict[col].custom_properties.length ) {
+				var props = DataTable._escapeCustomProperties(colDict[col].custom_properties);
+				jscode += name+'.setColumnProperties('+i+', '+props+');\n';
+			}
+		}
+		jscode += name+'.addRows('+this._data.length+');\n';
+
+		// We now go over the data and add each row
+		var prepData = this.preparedData(orderBy);
+		for( i in prepData ) {
+			var row = prepData[i][0],
+				cp = prepData[i][1];
+			// We add all the elements of this row by their order
+			for( j in columnOrder ) {
+				var coli = j,
+					col = columnOrder[j];
+				if( row[col] == null ) { continue; }
+				var cellCp = '';
+				if( DataTable._t.isArray(row[col]) && row[col].length == 3 ) {
+					cellCp = ', '+DataTable.escapeCustomProperties(row[col][2]);
+				}
+				var value = DataTable.singleValueToJS(row[col], colDict[col].type);
+				if( DataTable._t.isArray(value) ) {
+					// We have a formatted value or custom property as well
+					if( value[1] == null ) { value = [value[0], 'null']; }
+					jscode += name+'.setCell('+i+', '+j+', '+value[0]+', '+value[1]+cellCp+');\n';
+				} else {
+					jscode += name+'.setCell('+i+', '+j+', '+value+');\n';
+				}
+			}
+			if( cp.length ) {
+				jscode += name+'.setRowProperties('+i+', '+DataTable._escapeCustomProperties(cp)+');\n';
+			}
+		}
+		
+		return jscode;
+	};
+
+	/*
+	 * Initialization
+	 */	
+	
+	this._columns = DataTable.tableDescriptionParser(tableDescription);
+	this._data = [];
+	this.customProperties = {};
+
+	if( arguments.length > 2 && customProperties != null ) {
+		this.customProperties = customProperties;
+	}
+	if( arguments.length > 1 && data != null ) {
+		this.loadData(data);
+	}
 }
 
 /**
@@ -570,18 +748,14 @@ DataTable.tableDescriptionParser = function(tableDescription, depth) {
 
 // Puts the string in quotes, and escapes any inner quotes and slashes.
 DataTable._escapeValue = function(v) {
-	// FIXME: This code is incorrect. I'm not certain what does and doesn't need escaped
-	/* if isinstance(v, unicode):
-		# Here we use repr as in the usual case, but on unicode strings, it
-		# also escapes the unicode characters (which we want to leave as is).
-		# So, after repr() we decode using raw-unicode-escape, which decodes
-		# only the unicode characters, and leaves all the rest (", ', \n and
-		# more) escaped.
-		# We don't take the first character, because repr adds a u in the
-		# beginning of the string (usual repr output for unicode is u'...').
-		return repr(v).decode("raw-unicode-escape")[1:] */
-	// Here we use Javascript's built-in escaping mechanism for string using escape().
-	return "'"+escape(String(v)).replace('%24','$')+"'";
+	// this surely isn't strictly correct. It passes the tests
+	var result = String(v)
+	var q = result.indexOf("'") > -1 ? '"' : "'";
+
+	result = escape(result)
+		.replace('%24','$').replace('%27',"'");
+
+	return q+result+q;
 };
 
 // Escapes the custom properties dictionary.

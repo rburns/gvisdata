@@ -320,9 +320,79 @@ test('appendData',function(){
 	//equal(table.numberOfRows(), 3, '');
 });
 
+test('toJSCode',function(){
+	var table = new DataTable([
+		['a', 'number', "A'"], 
+		"b'", 
+		['c', 'timeofday']
+	],[
+		[1],
+		[null, 'z', new Date(0,0,0,1, 2, 3)],
+		[[2, '2$'], 'w', new Date(0,0,0,2, 3, 4)]
+	]);
+	equal(table.numberOfRows(),3,'Has three rows after initialization');
+    equal(table.toJSCode("mytab"),
+    	("var mytab = new google.visualization.DataTable();\n"+
+			"mytab.addColumn('number', \"A'\", 'a');\n"+
+			"mytab.addColumn('string', \"b'\", \"b'\");\n"+
+			"mytab.addColumn('timeofday', 'c', 'c');\n"+
+			"mytab.addRows(3);\n"+
+			"mytab.setCell(0, 0, 1);\n"+
+			"mytab.setCell(1, 1, 'z');\n"+
+			"mytab.setCell(1, 2, [1,2,3]);\n"+
+			"mytab.setCell(2, 0, 2, '2$');\n"+
+			"mytab.setCell(2, 1, 'w');\n"+
+			"mytab.setCell(2, 2, [2,3,4]);\n")
+		,'Outputs correct Javascript representation');
+
+	// UNSUPPORTED: non-string object properties are not supported in Javascript
+	//table = new DataTable({['a', 'number']: {'b': 'date', 'c': 'datetime'}},
+	//	{1: {},
+	//	2: {'b': new Date(0,0,0,1, 2, 3)},
+	//	3: {'c': new Date(1, 2, 3, 4, 5, 6)}});
+	//equal(table.NumberOfRows(),3);
+	//equal(table.ToJSCode("mytab2", columns_order=["c", "b", "a"],
+	//	("var mytab2 = new google.visualization.DataTable();\n"
+	//		"mytab2.addColumn('datetime', 'c', 'c');\n"
+	//		"mytab2.addColumn('date', 'b', 'b');\n"
+	//		"mytab2.addColumn('number', 'a', 'a');\n"
+	//		"mytab2.addRows(3);\n"
+	//		"mytab2.setCell(0, 2, 1);\n"
+	//		"mytab2.setCell(1, 1, new Date(1,1,3));\n"
+	//		"mytab2.setCell(1, 2, 2);\n"
+	//		"mytab2.setCell(2, 0, new Date(1,1,3,4,5,6));\n"
+	//		"mytab2.setCell(2, 2, 3);\n")
+	//	,'');
+});
+
 /**
  * The following tests are not part of the Python test suite
  */
+
+test('toJSCode - extra',function(){
+	var table = new DataTable([['a'], ['b'], ['c']],[
+		['foo','bar','baz'],
+		['red','green','blue'],
+		['one','two','three']
+	]);
+	equal(table.numberOfRows(),3,'Has three rows after initialization');
+    equal(table.toJSCode("mytab",['c', 'b', 'a']),
+    	("var mytab = new google.visualization.DataTable();\n"+
+			"mytab.addColumn('string', 'c', 'c');\n"+
+			"mytab.addColumn('string', 'b', 'b');\n"+
+			"mytab.addColumn('string', 'a', 'a');\n"+
+			"mytab.addRows(3);\n"+
+			"mytab.setCell(0, 0, 'baz');\n"+
+			"mytab.setCell(0, 1, 'bar');\n"+
+			"mytab.setCell(0, 2, 'foo');\n"+
+			"mytab.setCell(1, 0, 'blue');\n"+
+			"mytab.setCell(1, 1, 'green');\n"+
+			"mytab.setCell(1, 2, 'red');\n"+
+			"mytab.setCell(2, 0, 'three');\n"+
+			"mytab.setCell(2, 1, 'two');\n"+
+			"mytab.setCell(2, 2, 'one');\n")
+		,'Outputs correct Javascript representation');
+});
 
 test('type detection',function(){
 	var _t = DataTable._t;
