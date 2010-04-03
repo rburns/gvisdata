@@ -1,45 +1,45 @@
 /**
  * Wraps the data to convert to a Google Visualization API DataTable.
- * 
+ *
  * Create this object, populate it with data, then call one of the ToJS...
  * methods to return a string representation of the data in the format described.
- * 
+ *
  * You can clear all data from the object to reuse it, but you cannot clear
  * individual cells, rows, or columns. You also cannot modify the table schema
  * specified in the class constructor.
- * 
+ *
  * You can add new data one or more rows at a time. All data added to an
  * instantiated DataTable must conform to the schema passed in to __init__().
- * 
+ *
  * You can reorder the columns in the output table, and also specify row sorting
  * order by column. The default column order is according to the original
  * table_description parameter. Default row sort order is ascending, by column
  * 1 values. For a dictionary, we sort the keys for order.
- * 
+ *
  * The data and the table_description are closely tied, as described here:
- * 
+ *
  * The table schema is defined in the class constructor's table_description
  * parameter. The user defines each column using a tuple of
  * (id[, type[, label[, custom_properties]]]). The default value for type is
  * string, label is the same as ID if not specified, and custom properties is
  * an empty dictionary if not specified.
- * 
+ *
  * table_description is a dictionary or list, containing one or more column
  * descriptor tuples, nested dictionaries, and lists. Each dictionary key, list
  * element, or dictionary element must eventually be defined as
  * a column description tuple. Here's an example of a dictionary where the key
  * is a tuple, and the value is a list of two tuples:
  * {('a', 'number'): [('b', 'number'), ('c', 'string')]}
- * 
+ *
  * This flexibility in data entry enables you to build and manipulate your data
  * in a Javascript structure that makes sense for your program.
- * 
+ *
  * Add data to the table using the same nested design as the table's
  * table_description, replacing column descriptor tuples with cell data, and
  * each row is an element in the top level collection. This will be a bit
  * clearer after you look at the following examples showing the
  * table_description, matching data, and the resulting table:
- * 
+ *
  * Columns as list of tuples [col1, col2, col3]
  *   table_description: [('a', 'number'), ('b', 'string')]
  *   AppendData( [[1, 'z'], [2, 'w'], [4, 'o'], [5, 'k']] )
@@ -49,7 +49,7 @@
  *   2  w
  *   4  o
  *   5  k
- * 
+ *
  * Dictionary of columns, where key is a column, and value is a list of
  * columns  {col1: [col2, col3]}
  *   table_description: {('a', 'number'): [('b', 'number'), ('c', 'string')]}
@@ -58,7 +58,7 @@
  *   a  b  c
  *   1  2  z
  *   3  4  w
- * 
+ *
  * Dictionary where key is a column, and the value is itself a dictionary of
  * columns {col1: {col2, col3}}
  *   table_description: {('a', 'number'): {'b': 'number', 'c': 'string'}}
@@ -67,17 +67,17 @@
  *   a  b  c
  *   1  2  z
  *   3  4  w
- */ 
+ */
 
 
 
 
 /**
  * Initialize the data table from a table schema and (optionally) data.
- * 
+ *
  * See the class documentation for more information on table schema and data
  * values.
- * 
+ *
  * Args:
  *   table_description: A table schema, following one of the formats described
  *                      in TableDescriptionParser(). Schemas describe the
@@ -90,7 +90,7 @@
  *   custom_properties: Optional. A dictionary from string to string that
  *                      goes into the table's custom properties. This can be
  *                      later changed by changing self.custom_properties.
- * 
+ *
  * Raises:
  *   DataTableException: Raised if the data and the description did not match,
  *                       or did not use the supported formats.
@@ -106,19 +106,123 @@ function DataTable(tableDescription, data, customProperties) {
 	if( arguments.length > 1 && data != null ) {
 		this.LoadData(data);
 	}
-} 
+
+	/**
+	 * Appends new data to the table.
+	 *
+	 * Data is appended in rows. Data must comply with
+	 * the table schema passed in to the constructor. See singleValueToJS() for a list
+	 * of acceptable data types. See the DataTable documentation for more information
+	 * and examples of schema and data values.
+	 *
+	 * Args:
+	 *  data: The row to add to the table. The data must conform to the table
+	 *        description format.
+	 *  custom_properties: A dictionary of string to string, representing the
+	 *                     custom properties to add to all the rows.
+	 *
+	 * Raises:
+	 *  DataTableException: The data structure does not match the description.
+	 */
+	this.appendData = function(data, customProperties) {
+		if( arguments.length < 2 ) { customProperties = null; }
+
+		// If the maximal depth is 0, we simply iterate over the data table
+		// lines and insert them using _InnerAppendData. Otherwise, we simply
+		// let the _InnerAppendData handle all the levels.
+		if( !(this._columns[this._columns.length-1].depth) ) {
+			for( i in data ) {
+			    // replicating python specific behaviour
+				var element = DataTable._t.isArray(data) ? data[i] : i;
+				this._innerAppendData([{},customProperties], element, 0)
+			}
+		} else {
+			this._innerAppendData([{},customProperties], data, 0)
+		}
+	};
+
+	// Inner function to assist LoadData.
+	this._innerAppendData = function(prevColValues, data, colIndex){
+		// We first check that colIndex has not exceeded the columns size
+		if( colIndex >= this._columns ) {
+			throw 'The data does not match description, too deep';
+		}
+
+		// Dealing with the scalar case, the data is the last value.
+		if( this._columns[colIndex].container == 'scalar' ) {
+			prevColValues[0][this._columns[colIndex].id] = data;
+			this._data.push(prevColValues);
+			return;
+		}
+
+		if( this._columns[colIndex].container == 'iter' ) {
+			if( !DataTable._t.isArray(data) ) {
+				throw 'Expected iterable object, got '+DataTable._t.type(data);
+			}
+
+			// We only need to insert the rest of the columns
+			// If there are less items than expected, we only add what there is.
+			for( i in data ) {
+				if( colIndex >= this._columns.length ) {
+					throw 'Too many elements given in data';
+				}
+				prevColValues[0][this._columns[colIndex]['id']] = data[i];
+				colIndex += 1;
+			}
+			this._data.push(prevColValues);
+			return;
+		}
+
+		// We know the current level is an object, we verifiy the type
+		if( !DataTable._t.isObject(data) || DataTable._t.isArray(data) ) {
+			throw 'Expected dictionary at current level, got '+DataTable._t.type(data);
+		}
+
+		// We check if this is the last level
+		if( this._columns[colIndex].depth == this._columns[this._columns.length -1].depth ) {
+			// We need to add the keys in the dictionary as they are
+			for( key in this._columns[colIndex] ) {
+				var curId = this._columns[colIndex][key].id;
+				if( data[curId] != null ) {
+					prevColValues[0][curId] = data[curId];
+				}
+			}
+			this._data.push(prevColValues);
+			return;
+		}
+	
+		// We have a dictionary in an inner depth level.
+		if( DataTable._o.prop(data).length == 0 ) {
+			// In case this is an empty dictionary, we add a record with the columns
+			// filled only until this point.
+			this._data.push(prevColValues);
+		} else {
+			for( key in data.sort() ) {
+				colValues = prevColValues[0];
+				colValues[this._columns[colIndex.id]] = key;
+				this._innerAppendData([colValues, prevColValues[1]], data[key], colIndex + 1);
+			}
+		
+		}
+	};
+
+	// Returns the number of rows data stored in the table
+	this.numberOfRows = function() {
+		return this._data.length;
+	};
+}
 
 /**
  * Translates a single value and type into a JS value.
- * 
+ *
  * Internal helper method.
- * 
+ *
  * Args:
  *  value: The value which should be converted
  *  type: One of "string", "number", "boolean", "date", "datetime" or
  *              "timeofday".
  *  escapeFn: The function to use for escaping strings.
- * 
+ *
  * Returns:
  *  The proper JS format (as string) of the given value according to the
  *  given value_type. For null, we simply return "null".
@@ -142,7 +246,7 @@ function DataTable(tableDescription, data, customProperties) {
  *    singleValueToJS(False, "boolean") returns "false"
  *    singleValueToJS((5, "5$"), "number") returns ("5", "'5$'")
  *    singleValueToJS((null, "5$"), "number") returns ("null", "'5$'")
- * 
+ *
  * Raises:
  *   DataTableException: The value and type did not match in a not-recoverable
  *                       way, for example given value 'abc' for type 'number'.
@@ -150,7 +254,7 @@ function DataTable(tableDescription, data, customProperties) {
 DataTable.singleValueToJS = function(value, type, escapeFn) {
 	if( arguments.length < 3 ) { escapeFn = DataTable._escapeValue; }
 	var _t = DataTable._t;
-	
+
 	if( _t.isArray(value) ) {
 		var len = value.length;
 		// In case of an array, we run the same function on the value itself and
@@ -167,7 +271,7 @@ DataTable.singleValueToJS = function(value, type, escapeFn) {
 		}
 		return [js_value, escapeFn(value[1])];
 	}
-	
+
 	// The standard case - no formatting.
 	t_value = _t.type(value);
 	if( value == null ) {
@@ -223,7 +327,7 @@ DataTable.singleValueToJS = function(value, type, escapeFn) {
 
 /**
  * Parses a single column description. Internal helper method.
- * 
+ *
  * Args:
  *   description: a column description in the possible formats:
  *    'id'
@@ -238,23 +342,23 @@ DataTable.singleValueToJS = function(value, type, escapeFn) {
  *     - If type not given, string is used by default.
  *     - If custom properties are not given, an empty object is used by
  *       default.
- * 
+ *
  * Raises:
  *   DataTableException: The column description did not match the RE, or
  *       unsupported type was passed.
  */
 DataTable.columnTypeParser = function(description) {
 	var _t = DataTable._t;
-	
-	if( arguments.length < 1 || !description ) { 
-		throw 'Description error: empty description given'; 
+
+	if( arguments.length < 1 || !description ) {
+		throw 'Description error: empty description given';
 	}
 
 	t_desc = _t.type(description);
 	if( t_desc != 'array' && t_desc != 'string' ) {
 		throw 'Description error: expected either string or array, got '+t_desc;
 	}
-	
+
 	if( t_desc == 'string' ) { description = [description,]; }
 
 	// According to the array's length, we fill the keys
@@ -284,23 +388,23 @@ DataTable.columnTypeParser = function(description) {
 				}
 				descDict.custom_properties = description[3];
 				if( description.length > 4 ) {
-					throw 'Description error: array of length > 4';					
+					throw 'Description error: array of length > 4';
 				}
 			}
 		}
-	}		
+	}
 
 	var validTypes = ["string", "number", "boolean","date", "datetime", "timeofday"];
 	if( !validTypes.some(function(e){ return e == descDict.type; }) ) {
-		throw 'Description error: unsupported type \''+descDict.type+'\'';		
+		throw 'Description error: unsupported type \''+descDict.type+'\'';
 	}
-	
+
 	return descDict;
 };
 
 /**
  * Parses the table_description object for internal use.
- * 
+ *
  * Parses the user-submitted table description into an internal format used
  * by the Python DataTable class. Returns the flat list of parsed columns.
 
@@ -309,7 +413,7 @@ DataTable.columnTypeParser = function(description) {
  *                      with one of the formats described below.
  *   depth: Optional. The depth of the first level in the current description.
  *          Used by recursive calls to this function.
- * 
+ *
  * Returns:
  *   List of columns, where each column represented by a dictionary with the
  *   keys: id, label, type, depth, container which means the following:
@@ -321,11 +425,11 @@ DataTable.columnTypeParser = function(description) {
  *   - container: 'dict', 'iter' or 'scalar' for parsing the format easily.
  *   - custom_properties: The custom properties for this column.
  *   The returned description is flattened regardless of how it was given.
- * 
+ *
  * Raises:
  *   DataTableException: Error in a column description or in the description
  *                       structure.
- * 
+ *
  * Examples:
  *   A column description can be of the following forms:
  *    'id'
@@ -341,14 +445,14 @@ DataTable.columnTypeParser = function(description) {
  *   If the type is not specified, we treat it as string.
  *   If no specific label is given, the label is simply the id.
  *   If no custom properties are given, we use an empty dictionary.
- * 
+ *
  *   input: [('a', 'date'), ('b', 'timeofday', 'b', {'foo': 'bar'})]
  *   output: [{'id': 'a', 'label': 'a', 'type': 'date',
  *             'depth': 0, 'container': 'iter', 'custom_properties': {}},
  *            {'id': 'b', 'label': 'b', 'type': 'timeofday',
  *             'depth': 0, 'container': 'iter',
  *             'custom_properties': {'foo': 'bar'}}]
- * 
+ *
  *   input: {'a': [('b', 'number'), ('c', 'string', 'column c')]}
  *   output: [{'id': 'a', 'label': 'a', 'type': 'string',
  *             'depth': 0, 'container': 'dict', 'custom_properties': {}},
@@ -356,7 +460,7 @@ DataTable.columnTypeParser = function(description) {
  *             'depth': 1, 'container': 'iter', 'custom_properties': {}},
  *            {'id': 'c', 'label': 'column c', 'type': 'string',
  *             'depth': 1, 'container': 'iter', 'custom_properties': {}}]
- * 
+ *
  *   input:  {('a', 'number', 'column a'): { 'b': 'number', 'c': 'string'}}
  *   output: [{'id': 'a', 'label': 'column a', 'type': 'number',
  *             'depth': 0, 'container': 'dict', 'custom_properties': {}},
@@ -369,13 +473,13 @@ DataTable.columnTypeParser = function(description) {
  *             'depth': 0, 'container': 'dict', 'custom_properties': {}},
  *            {'id': 'c', 'label': 'count', 'type': 'number',
  *             'depth': 1, 'container': 'scalar', 'custom_properties': {}}]
- * 
+ *
  *   input: {'a': ('number', 'column a'), 'b': ('string', 'column b')}
  *   output: [{'id': 'a', 'label': 'column a', 'type': 'number', 'depth': 0,
  *            'container': 'dict', 'custom_properties': {}},
  *            {'id': 'b', 'label': 'column b', 'type': 'string', 'depth': 0,
  *            'container': 'dict', 'custom_properties': {}}
- * 
+ *
  *   NOTE: there might be ambiguity in the case of a dictionary representation
  *   of a single column. For example, the following description can be parsed
  *   in 2 different ways: {'a': ('b', 'c')} can be thought of a single column
@@ -403,7 +507,7 @@ DataTable.tableDescriptionParser = function(tableDescription, depth) {
 
 	// Since it is not a string, table_description must be iterable.
 	if( !_t.isArray(tableDescription) && !_t.isObject(tableDescription) ) {
-		throw 'Expected an iterable object, got '+_t.type(tableDescription);			
+		throw 'Expected an iterable object, got '+_t.type(tableDescription);
 	}
 	if( _t.type(tableDescription) != 'object' ) {
 		// We expect an array.
@@ -415,7 +519,7 @@ DataTable.tableDescriptionParser = function(tableDescription, depth) {
 			columns.push(parsedCol);
 		}
     		if( columns.length == 0 ) {
-			throw 'Description iterable objects should not be empty.';      		
+			throw 'Description iterable objects should not be empty.';
     		}
 		return columns;
 	}
@@ -464,7 +568,7 @@ DataTable.tableDescriptionParser = function(tableDescription, depth) {
 	return result;
 };
 
-// Puts the string in quotes, and escapes any inner quotes and slashes.	
+// Puts the string in quotes, and escapes any inner quotes and slashes.
 DataTable._escapeValue = function(v) {
 	// FIXME: This code is incorrect. I'm not certain what does and doesn't need escaped
 	/* if isinstance(v, unicode):
@@ -480,7 +584,7 @@ DataTable._escapeValue = function(v) {
 	return "'"+escape(String(v)).replace('%24','$')+"'";
 };
 
-// Escapes the custom properties dictionary.	
+// Escapes the custom properties dictionary.
 DataTable._escapeCustomProperties = function(properties) {
 	l = [];
 	for( var key in properties ) {
@@ -514,7 +618,7 @@ DataTable._t = {
  		return this.hasConstructor(v,'String');
 	},
 	isDate: function(v){
- 		return this.hasConstructor(v,'Date');	
+ 		return this.hasConstructor(v,'Date');
 	},
 	isArray: function(v){
 		return this.hasConstructor(v,'Array');
@@ -533,7 +637,7 @@ DataTable._o = {
 		if( typeof(obj) != 'object' ) { return []; }
 		var result = [];
 		for( prop in obj ) { result.push(prop); }
-		return result;			
+		return result;
 	}
 };
 

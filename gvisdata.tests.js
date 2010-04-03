@@ -1,8 +1,8 @@
 /**
  * modules
  */
- 
-var 
+
+var
 sys = require('sys'),
 qunit = require('./qunit'),
 gvisdata = require('./gvisdata');
@@ -11,7 +11,7 @@ gvisdata = require('./gvisdata');
  * global definitions
  */
 
-var 
+var
 QUnit = qunit.QUnit,
 module = qunit.module,
 test = qunit.test,
@@ -45,7 +45,7 @@ QUnit.testDone = function(name, failures, total) {
 QUnit.done = function(failures, total) {
 	sys.puts('total tests: '+total+' failures: '+failures+'\n');
 }
- 
+
 /**
  * tests
  */
@@ -56,7 +56,7 @@ test('DataTable.singleValueToJS()',function(){
 	// We first check that given an unknown type it raises exception
 	exception(function(){ DataTable.singleValue(1,'no_such_type'); }
     	,'Exception raised on unknown type');
-    	
+
     // If we give a type which does not match the value, we expect it to fail
 	exception(function(){ DataTable.singleValueToJs('a','number'); }
     	,'Exception raised on type mismatch: number.');
@@ -64,7 +64,7 @@ test('DataTable.singleValueToJS()',function(){
     	,'Exception raised on type mismatch: timeofday.');
 	exception(function(){ DataTable.singleValueToJs(10,'date'); }
     	,'Exception raised on type mismatch: date.');
-    
+
 	// A tuple for value and formatted value should be of length 2
 	exception(function(){ DataTable.singleValueToJS([5,'5$','6$'],'string'); }
     	,'Exception raised on non-object, third element of first argument');
@@ -79,7 +79,7 @@ test('DataTable.singleValueToJS()',function(){
 	equal(DataTable.singleValueToJS(null, 'boolean'), 'null'
 		,'boolean null');
 	deepEqual(DataTable.singleValueToJS([false, 'a'], 'boolean'), ['false',"'a'"]
-		,'boolean [false, \'a\']');	
+		,'boolean [false, \'a\']');
 
 	equal(DataTable.singleValueToJS(1,'number'), '1'
 		,'number 1');
@@ -106,13 +106,13 @@ test('DataTable.singleValueToJS()',function(){
 
 	equal(DataTable.singleValueToJS(null, 'date'), 'null'
 		,'date null');
-	
+
 	// UNSUPPORTED: The Javascript version does not support arrays for timeofday values
-	// arrays are used in place of tuples for value formatting and custom 
+	// arrays are used in place of tuples for value formatting and custom
 	// colomn parameters
 	//equal(DataTable.singleValueToJS([10,11,12] , 'timeofday'),'[10,11,12]');
 	equal(DataTable.singleValueToJS(new Date(2010, 1, 2, 3, 4, 5), 'timeofday'), '[3,4,5]'
-		,'timeofday Date object');	
+		,'timeofday Date object');
 	equal(DataTable.singleValueToJS(null, 'timeofday'), 'null'
 		,'timeofday null');
 
@@ -178,31 +178,31 @@ test('DataTable.columnTypeParser()',10,function(){
 		custom_properties: {}
 	},'');
 	deepEqual(DataTable.columnTypeParser(['abc',]),{
-		id: 'abc', 
+		id: 'abc',
 		label: 'abc',
 		type: 'string',
 		custom_properties: {}
 	},'');
 	deepEqual(DataTable.columnTypeParser(['abc', 'string', 'bcd']),{
-		id: 'abc', 
+		id: 'abc',
 		label: 'bcd',
 		type: 'string',
 		custom_properties: {}
 	},'');
 	deepEqual(DataTable.columnTypeParser(['a', 'number', 'b']),{
-		id: 'a', 
+		id: 'a',
 		label: 'b',
 		type: 'number',
 		custom_properties: {}
 	},'');
 	deepEqual(DataTable.columnTypeParser(['a', 'number']),{
-		id: 'a', 
+		id: 'a',
 		label: 'a',
 		type: 'number',
 		custom_properties: {}
 	},'');
 	deepEqual(DataTable.columnTypeParser(['i', 'string', 'l', {key: 'value'}]),{
-		id: 'i', 
+		id: 'i',
 		label: 'l',
 		type: 'string',
 		custom_properties: {key: 'value'}
@@ -229,7 +229,7 @@ test('DataTable.tableDescriptionParser',function(){
     // Some valid examples which mixes both dictionaries and lists
 	deepEqual(DataTable.tableDescriptionParser([['a', 'date'], ['b', 'timeofday']]), [
 		{id: 'a', label: 'a', type: 'date', depth: 0, container: 'iter', custom_properties: {}},
-		{id: 'b', label: 'b', type: 'timeofday', depth: 0, container: 'iter', custom_properties: {}}	
+		{id: 'b', label: 'b', type: 'timeofday', depth: 0, container: 'iter', custom_properties: {}}
 	], 'depth 1 array definition');
 	deepEqual(DataTable.tableDescriptionParser({a: [['b', 'number'], ['c', 'string', 'column c']]}), [
 		{id: 'a', label: 'a', type: 'string', depth: 0, container: 'dict', custom_properties: {}},
@@ -248,7 +248,7 @@ test('DataTable.tableDescriptionParser',function(){
 	//deepEqual(DataTable.tableDescriptionParser({['a', 'number', 'column a']:{b: 'number', c: 'string'}}), [
 	//	{id: 'a', label: 'column a', type: 'number', depth: 0, container: 'dict', custom_properties: {}},
 	//	{id: 'b', label: 'b', type: 'number', depth: 1, container: 'dict', custom_properties: {}},
-	//	{id: 'c', label: 'c', type: 'string', depth: 1, container: 'dict', custom_properties: {}}		
+	//	{id: 'c', label: 'c', type: 'string', depth: 1, container: 'dict', custom_properties: {}}
 	//], 'depth 2 object property in object defenition');
 	//deepEqual(DataTable.tableDescriptionParser({['a', 'number', 'column a']:['b', 'string', 'column b']}), [
 	//	{id: 'a', label: 'column a', type: 'number', depth: 0, container: 'dict', custom_properties: {}},
@@ -264,7 +264,7 @@ test('DataTable.tableDescriptionParser',function(){
 	deepEqual(DataTable.tableDescriptionParser({a: ['b', 'number', 'b', {}]}), [
 		{id: 'a', label: 'a', type: 'string', depth: 0, container: 'dict', custom_properties: {}},
 		{id: 'b', label: 'b', type: 'number', depth: 1, container: 'scalar', custom_properties: {}},
-	], 'depth 2 ambiguous mixed object/array definition'); 
+	], 'depth 2 ambiguous mixed object/array definition');
 	// UNSUPPORTED: non-string object properties are not supported in Javascript
 	//deepEqual(DataTable.tableDescriptionParser({['a',]: ['b', 'number']}), [
 	//	{id: 'a', label: 'a', type: 'string', depth: 0, container: 'dict', custom_properties: {}},
@@ -276,20 +276,61 @@ test('appendData',function(){
 	// We check a few examples where the format of the data does not match the
 	// description and then a few valid examples. The test for the content itself
 	// is done inside the toJSCode and toJSon functions.
-	var table = new DataTable([("a", "number"), ("b", "string")]);
+
+	var table = new DataTable([["a", "number"], ["b", "string"]]);
+	equal(table.numberOfRows(), 0, 'Number of rows is 0');
+	exception(function(){ table.appendData([[1,"a", true]]); }
+		,'Raises exception on too many columns');
+	exception(function(){ table.appendData({1: ['a'], 2: ['b']}); }
+		,'Raises exception on wrong data type for column in object');
+ 	equal(table.appendData([[1,'a'],[2, 'b']]), null, '');
+	equal(table.numberOfRows(),2,'Column count is 2');
+	equal(table.appendData([[3, 'c'],[4]]), null, '');
+	equal(table.numberOfRows(), 4, 'Column count is 4');
+
+	var table = new DataTable({a: 'number', b: 'string'});
+	equal(table.numberOfRows(), 0, 'Number of rows is 0');
+	exception(function(){ table.appendData([[1, 'a']]); }
+		,'Raises exception on ...');
+	exception(function(){ table.appendData({5: {b: 'z'}}); }
+		,'Raises exception on ...');
+	equal(table.appendData([{a: 1, b: 'z'}]), null, '');
+	equal(table.numberOfRows(), 1, '');
+
+	// UNSUPPORTED: non-string object properties are not supported in Javascript
+	//table = new DataTable({['a', 'number]:  [['b', 'string']]});
+	//equal(table.numberOfRows(), 0, 'Number of rows is 0');
+	//exception(function(){ table.appendData([[1, 'a']]); }
+	//	,'');
+	//exception(function(){ table.appendData({5: {b: 'z'}}); }
+	//	,'');
+	//equal(table.appendData({5: ['z'], 6: ['w']}), null, '');
+	//equal(table.numberOfRows(), 2, '');
+
+	// UNSUPPORTED: non-string object properties are not supported in Javascript
+	//table = new DataTable({('a', 'number'): {b: 'string', c: 'number'}});
+	//equal(table.numberOfRows(), 0, 'Number of rows is 0');
+	//exception(function(){ table.appendData([[1, 'a']]); }
+	//	,'');
+	//exception(function(){ table.appendData({1: ['a', 2]}); }
+	//	,'');
+	//equal(table.appendData({5: {b: 'z', c: 6},
+	//                        7: {c: 8},
+	//                        9: {}}), null, '');
+	//equal(table.numberOfRows(), 3, '');
 });
 
-/** 
+/**
  * The following tests are not part of the Python test suite
  */
- 
+
 test('type detection',function(){
 	var _t = DataTable._t;
 
 	ok(_t.isObject({}), 'Object literal is an object');
-	equal(_t.isString({}), false, 'Object literal is not a string');		
-	equal(_t.isArray({}), false, 'Object literal is not an array');		
-	
+	equal(_t.isString({}), false, 'Object literal is not a string');
+	equal(_t.isArray({}), false, 'Object literal is not an array');
+
 	ok(_t.isString(new String('test')), 'String object is a string');
 	ok(_t.isString('test'), 'String literal is a string');
 
@@ -298,13 +339,13 @@ test('type detection',function(){
 
 	ok(_t.isDate(new Date()), 'Date object is a date');
 
-	equal(_t.type({}), 'object', 'type of object literal');		
+	equal(_t.type({}), 'object', 'type of object literal');
 	equal(_t.type('test'), 'string', 'type of string literal');
 	equal(_t.type(new String('test')), 'string', 'type of string object');
 	equal(_t.type(new Array()), 'array', 'type of Array object');
 	equal(_t.type([]), 'array', 'type of array literal');
 	equal(_t.type(new Date()), 'date', 'type of Date object');
-	equal(_t.type(false),'boolean', 'type of false is boolean');	
+	equal(_t.type(false),'boolean', 'type of false is boolean');
 });
 
 test('object enhancement', function(){
