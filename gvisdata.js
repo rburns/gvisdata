@@ -91,7 +91,7 @@ var inspect = require('sys').inspect;
  *         can add data later by calling AppendData().
  *   custom_properties: Optional. A dictionary from string to string that
  *                      goes into the table's custom properties. This can be
- *                      later changed by changing self.custom_properties.
+ *                      later changed by changing this.custom_properties.
  *
  * Raises:
  *   DataTableException: Raised if the data and the description did not match,
@@ -110,13 +110,9 @@ function DataTable(tableDescription, data, customProperties) {
 	 *   custom_properties: A dictionary of string to string to set as the custom
 	 *                      properties for all rows.
 	 */
-	this.loadData = function(data, customProperties) {
-		if( arguments.length > 1 ) {
-			this.custom_properties = customProperties;
-		}
-		
+	this.loadData = function(data, customProperties) {		
 		this._data = [];
-		this.appendData(data, this.customProperties);
+		this.appendData(data, customProperties);
 	};
 
 	/**
@@ -224,6 +220,24 @@ function DataTable(tableDescription, data, customProperties) {
 	};
 
 	/**
+	 * 	Sets the custom properties for given row(s).
+	 * 
+	 * Can accept a single row or an iterable of rows.
+	 * Sets the given custom properties for all specified rows.
+	 * 
+	 * Args:
+	 *   rows: The row, or rows, to set the custom properties for.
+	 *   custom_properties: A string to string dictionary of custom properties to
+	 *   set for all rows.
+	 */
+	this.setRowsCustomProperties = function(rows,customProperties) {
+		if( !DataTable._t.isArray(rows) && !DataTable._t.isObject(rows) ) { rows = [rows]; }
+		for( i in rows ) {
+			this._data[rows[i]] = [this._data[rows[i]][0], customProperties];
+		}
+	};
+
+	/**
 	 * Prepares the data for enumeration - sorting it by order_by.
 	 * 
 	 * Args:
@@ -319,10 +333,10 @@ function DataTable(tableDescription, data, customProperties) {
 		}
 		colDict = {};
 		for( i in this._columns ) { colDict[this._columns[i].id] = this._columns[i]; }
-		
+
 		// We first create the table with the given name
 		var jscode = 'var '+name+' = new google.visualization.DataTable();\n';
-		if( this.customProperties.length ) {
+		if( DataTable._o.prop(this.customProperties).length ) {
 			var props = DataTable._escapeCustomProperties(this.customProperties);
 			jscode += name+'.setTableProperties('+props+');\n';
 		}
@@ -336,7 +350,7 @@ function DataTable(tableDescription, data, customProperties) {
 
 			jscode += name+".addColumn('"+type+"', "+label+", "+id+");\n";
 			
-			if( colDict[col].custom_properties.length ) {
+			if( DataTable._o.prop(colDict[col].custom_properties).length ) {
 				var props = DataTable._escapeCustomProperties(colDict[col].custom_properties);
 				jscode += name+'.setColumnProperties('+i+', '+props+');\n';
 			}
@@ -352,10 +366,10 @@ function DataTable(tableDescription, data, customProperties) {
 			for( j in columnOrder ) {
 				var coli = j,
 					col = columnOrder[j];
-				if( row[col] == null ) { continue; }
+				if( !row || row[col] == null ) { continue; }
 				var cellCp = '';
 				if( DataTable._t.isArray(row[col]) && row[col].length == 3 ) {
-					cellCp = ', '+DataTable.escapeCustomProperties(row[col][2]);
+					cellCp = ', '+DataTable._escapeCustomProperties(row[col][2]);
 				}
 				var value = DataTable.singleValueToJS(row[col], colDict[col].type);
 				if( DataTable._t.isArray(value) ) {
@@ -366,7 +380,7 @@ function DataTable(tableDescription, data, customProperties) {
 					jscode += name+'.setCell('+i+', '+j+', '+value+');\n';
 				}
 			}
-			if( cp.length ) {
+			if( DataTable._o.prop(cp).length ) {
 				jscode += name+'.setRowProperties('+i+', '+DataTable._escapeCustomProperties(cp)+');\n';
 			}
 		}

@@ -365,6 +365,46 @@ test('toJSCode',function(){
 	//	,'');
 });
 
+test('custom properties',function(){
+	// The json of the initial data we load to the table.
+	// FIXME this json is invalid
+	var json = ("{cols:"+
+		"[{id:'a',label:'A',type:'number',p:{'col_cp':'col_v'}},"+
+		"{id:'b',label:'b',type:'string'},"+
+		"{id:'c',label:'c',type:'boolean'}],"+
+		"rows:["+
+		"{c:[{v:1},,{v:null,p:{'null_cp':'null_v'}}],p:{'row_cp':'row_v'}},"+
+		"{c:[,{v:'z',p:{'cell_cp':'cell_v'}},{v:true}]},"+
+		"{c:[{v:3},,{v:null}],p:{'row_cp2':'row_v2'}}],"+
+		"p:{'global_cp':'global_v'}"+
+		"}");
+	var jscode = ("var mytab = new google.visualization.DataTable();\n"+
+		"mytab.setTableProperties({'global_cp':'global_v'});\n"+
+		"mytab.addColumn('number', 'A', 'a');\n"+
+		"mytab.setColumnProperties(0, {'col_cp':'col_v'});\n"+
+		"mytab.addColumn('string', 'b', 'b');\n"+
+		"mytab.addColumn('boolean', 'c', 'c');\n"+
+		"mytab.addRows(3);\n"+
+		"mytab.setCell(0, 0, 1);\n"+
+		"mytab.setCell(0, 2, null, null, {'null_cp':'null_v'});\n"+
+		"mytab.setRowProperties(0, {'row_cp':'row_v'});\n"+
+		"mytab.setCell(1, 1, 'z', null, {'cell_cp':'cell_v'});\n"+
+		"mytab.setCell(1, 2, true);\n"+
+		"mytab.setCell(2, 0, 3);\n"+
+		"mytab.setRowProperties(2, {'row_cp2':'row_v2'});\n");
+
+    var table = new DataTable([
+			['a', 'number', 'A', {col_cp: 'col_v'}], 
+			"b",
+			['c', 'boolean']
+		], null, {global_cp: 'global_v'});
+    table.appendData([[1, null, [null, null, {null_cp: 'null_v'}]]],{row_cp: 'row_v'});
+    table.appendData([[null, ['z', null, {cell_cp: 'cell_v'}], true], [3]]);
+    table.setRowsCustomProperties(2, {row_cp2: 'row_v2'});
+    //equal(table.ToJSon(), json, '');
+    equal(table.toJSCode("mytab"), jscode, '');
+});
+
 /**
  * The following tests are not part of the Python test suite
  */
