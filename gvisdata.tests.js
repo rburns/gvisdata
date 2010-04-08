@@ -401,8 +401,8 @@ test('custom properties',function(){
     table.appendData([[1, null, [null, null, {null_cp: 'null_v'}]]],{row_cp: 'row_v'});
     table.appendData([[null, ['z', null, {cell_cp: 'cell_v'}], true], [3]]);
     table.setRowsCustomProperties(2, {row_cp2: 'row_v2'});
-    //equal(table.ToJSon(), json, '');
-    equal(table.toJSCode("mytab"), jscode, '');
+    equal(table.toJSON(), json, 'Correct JSON output');
+    equal(table.toJSCode("mytab"), jscode, 'Correct JSCode output');
 });
 
 /**
@@ -463,6 +463,19 @@ test('object enhancement', function(){
 
 	deepEqual(_o.prop({a: 'x', b: 'y', c: 'z'}), ['a','b','c'], 'Object properties');
 	deepEqual(_o.val({a: 'x', b: 'y', c: 'z'}), ['x','y','z'], 'Object values');
+	
+	var obj1 = {a: 'x', b: 'y', c: ['a','b','c'], d: {a: 1, b: 2}};
+	var obj2 = _o.clone(obj1);
+	deepEqual(obj1, {a: 'x', b: 'y', c: ['a','b','c'], d: {a: 1, b: 2}}
+		,'clone source is unaltered');
+	deepEqual(obj2, {a: 'x', b: 'y', c: ['a','b','c'], d: {a: 1, b: 2}}
+		,'clone is the same');
+
+	obj2.a = 'a';
+	deepEqual(obj2, {a: 'a', b: 'y', c: ['a','b','c'], d: {a: 1, b: 2}}
+		,'changes affect the clone');
+	deepEqual(obj1, {a: 'x', b: 'y', c: ['a','b','c'], d: {a: 1, b: 2}}
+		,'changes don\'t alter the source');	
 });
 
 

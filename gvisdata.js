@@ -1,5 +1,3 @@
-var puts = require('sys').puts;
-var inspect = require('sys').inspect;
 /**
  * Wraps the data to convert to a Google Visualization API DataTable.
  *
@@ -328,10 +326,10 @@ function DataTable(tableDescription, data, customProperties) {
 	 */
 	this.toJSCode = function(name, columnOrder, orderBy) {
 		if( arguments.length == 1 || columnOrder == null ) {
-			columnOrder = [];
+			var columnOrder = [];
 			for( i in this._columns ) {	columnOrder.push(this._columns[i].id); }
 		}
-		colDict = {};
+		var colDict = {};
 		for( i in this._columns ) { colDict[this._columns[i].id] = this._columns[i]; }
 
 		// We first create the table with the given name
@@ -386,6 +384,114 @@ function DataTable(tableDescription, data, customProperties) {
 		}
 		
 		return jscode;
+	};
+
+	/**
+	 * Writes a JSON string that can be used in a JS DataTable constructor.
+	 * 
+	 * This method writes a JSON string that can be passed directly into a Google
+	 * Visualization API DataTable constructor. Use this output if you are
+	 * hosting the visualization HTML on your site, and want to code the data
+	 * table in Python. Pass this string into the
+	 * google.visualization.DataTable constructor, e.g,:
+	 *   ... on my page that hosts my visualization ...
+	 *   google.setOnLoadCallback(drawTable);
+	 *   function drawTable() {
+	 *     var data = new google.visualization.DataTable(_my_JSon_string, 0.6);
+	 *     myTable.draw(data);
+	 *  }
+	 * 
+	 * Args:
+	 *   columns_order: Optional. Specifies the order of columns in the
+	 *                  output table. Specify a list of all column IDs in the order
+	 *                  in which you want the table created.
+	 *                  Note that you must list all column IDs in this parameter,
+	 *                  if you use it.
+	 *   order_by: Optional. Specifies the name of the column(s) to sort by.
+	 *             Passed as is to _PreparedData().
+	 * 
+	 * Returns:
+	 *  A JSon constructor string to generate a JS DataTable with the data
+	 *  stored in the DataTable object.
+	 *  Example result (the result is without the newlines):
+	 *   {cols: [{id:'a',label:'a',type:'number'},
+	 *           {id:'b',label:'b',type:'string'},
+	 *           {id:'c',label:'c',type:'number'}],
+	 *    rows: [{c:[{v:1},{v:'z'},{v:2}]}, c:{[{v:3,f:'3$'},{v:'w'},{v:null}]}],
+	 *    p:     {'foo': 'bar'}}
+	 * 
+	 * Raises:
+	 *  DataTableException: The data does not match the type.
+	 */
+	this.toJSON = function(columnOrder, orderBy) {
+		if( arguments.length == 0 || columnOrder == null ) {
+			var columnOrder = [];
+			for( var i in this._columns ) {	columnOrder.push(this._columns[i].id); }
+		}
+		var colDict = {};
+		for( var i in this._columns ) { colDict[this._columns[i].id] = this._columns[i]; }
+
+		// Creating the columns jsons
+		var colJSON = [];
+		for( var i in columnOrder ) {
+			var d = DataTable._o.clone(colDict[columnOrder[i]]);
+			d.id = DataTable._escapeValue(d.id);
+			d.label = DataTable._escapeValue(d.label);
+			d.cp = '';
+			if( DataTable._o.prop(colDict[columnOrder[i]].custom_properties).length ) {
+				var prop = colDict[columnOrder[i]].custom_properties
+				d.cp = ',p:'+DataTable._escapeCustomProperties(prop);
+			}
+			colJSON.push("{id:"+d.id+",label:"+d.label+",type:'"+d.type+"'"+d.cp+"}");
+		}
+
+		// Creating the rows jsons
+		var rowJSON = [];
+		var prepData = this.preparedData(orderBy);
+		for( var i in prepData ) {
+			var row = prepData[i][0],
+				cp = prepData[i][1];
+			var cellJSON = [];
+			for( var i in columnOrder ) {
+				// We omit the {v:null} for a None value of the not last column
+				var value = row[columnOrder[i]];
+				if( !value && columnOrder[i] != columnOrder[columnOrder.length-1] ) {
+					cellJSON.push('');
+				} else {
+					value = DataTable.singleValueToJS(value, colDict[columnOrder[i]]['type']);
+					if( DataTable._t.isArray(value) ) {
+						// We have a formatted value or custom property as well
+						if( row[columnOrder[i]].length == 3 ) {
+							if( value[1] == null ) {
+								cellJSON.push('{v:'+value[0]+',p:'
+									+DataTable._escapeCustomProperties(row[columnOrder[i]][2])+'}');
+							} else {
+								cellJSON.push('{v:'+value+',f:'
+									+DataTable._escapeCustomProperties(row[columnOrder[i]][2])+',p:}');
+							}
+						} else {
+							cellJSON.push('{v:'+value[0]+',f:'+value[1]+'}');
+						}
+					} else {
+						cellJSON.push('{v:'+value+'}');
+					}
+				}
+			}
+			if( DataTable._o.prop(cp).length ) {
+				rowJSON.push('{c:['+cellJSON.join(',')+'],p:'
+					+DataTable._escapeCustomProperties(cp)+'}'); 
+			} else {
+				rowJSON.push('{c:['+cellJSON.join(',')+']}');
+			}
+		}
+		
+		var genCustomProperties = '';
+		if( DataTable._o.prop(this.customProperties).length ) {
+			genCustomProperties = ',p:'+DataTable._escapeCustomProperties(this.customProperties);
+		}  
+		
+		var json = "{cols:["+colJSON.join(',')+"],rows:["+rowJSON.join(',')+"]"+genCustomProperties+"}";
+		return json;
 	};
 
 	/*
@@ -826,6 +932,18 @@ DataTable._o = {
 		var result = [];
 		for( prop in obj ) { result.push(prop); }
 		return result;
+	},
+	clone: function(obj) {
+		if( !DataTable._t.isObject(obj) ) return {};
+		var newObj = (obj instanceof Array) ? [] : {};
+		for (i in obj) {
+			if (obj[i] && typeof obj[i] == "object") {
+				newObj[i] = this.clone(obj[i]);
+			} else {
+				newObj[i] = obj[i]
+			}
+		} 
+		return newObj;
 	}
 };
 
