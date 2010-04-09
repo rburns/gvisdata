@@ -108,7 +108,9 @@ function DataTable(tableDescription, data, customProperties) {
 	 *   custom_properties: A dictionary of string to string to set as the custom
 	 *                      properties for all rows.
 	 */
-	this.loadData = function(data, customProperties) {		
+	this.loadData = function(data, customProperties) {
+		if( arguments.length < 2 ) { customProperties = null; }
+
 		this._data = [];
 		this.appendData(data, customProperties);
 	};
@@ -203,12 +205,11 @@ function DataTable(tableDescription, data, customProperties) {
 			// filled only until this point.
 			this._data.push(prevColValues);
 		} else {
-			for( key in data.sort() ) {
-				colValues = prevColValues[0];
-				colValues[this._columns[colIndex.id]] = key;
+			for( key in data ) {
+				var colValues = DataTable._o.clone(prevColValues[0]);
+				colValues[this._columns[colIndex].id] = key;
 				this._innerAppendData([colValues, prevColValues[1]], data[key], colIndex + 1);
-			}
-		
+			}		
 		}
 	};
 
@@ -868,7 +869,7 @@ DataTable.tableDescriptionParser = function(tableDescription, depth) {
 
 // Puts the string in quotes, and escapes any inner quotes and slashes.
 DataTable._escapeValue = function(v) {
-	// this surely isn't strictly correct. It passes the tests
+	//FIXME this surely isn't strictly correct. It passes the tests
 	var result = String(v)
 	var q = result.indexOf("'") > -1 ? '"' : "'";
 

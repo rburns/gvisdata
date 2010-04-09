@@ -3,7 +3,6 @@
  */
 
 var
-sys = require('sys'),
 qunit = require('./qunit'),
 gvisdata = require('./gvisdata');
 
@@ -27,6 +26,8 @@ DataTable = gvisdata.DataTable;
 /**
  * output configuration
  */
+
+var sys = require('sys');
 
 QUnit.jsDump.HTML = false;
 
@@ -83,8 +84,11 @@ test('DataTable.singleValueToJS()',function(){
 
 	equal(DataTable.singleValueToJS(1,'number'), '1'
 		,'number 1');
-	equal(DataTable.singleValueToJS(1.0, 'number'), '1.0'
-		,'number 1.0');
+	// UNSUPPORTED: trailing 0's are not retained in Javascript float conversion
+	//equal(DataTable.singleValueToJS(1.0, 'number'), '1.0'
+	//	,'number 1.0');
+	equal(DataTable.singleValueToJS(1.1, 'number'), '1.1'
+		,'number 1.1');
 	equal(DataTable.singleValueToJS(-5, 'number'), '-5'
 		,'number -5');
 	equal(DataTable.singleValueToJS(null, 'number'), 'null'
@@ -125,7 +129,6 @@ test('DataTable.singleValueToJS()',function(){
 		,'string [null,\'null\']');
 });
 
-// FIXME: I'm not certain these tests are equivalent to the relevant Python tests
 test('problematic strings', 18, function(){
 	// Checking escaping of strings
 	var strings = [
@@ -144,7 +147,6 @@ test('problematic strings', 18, function(){
 	}
 });
 
-// FIXME: I'm not certain these tests are equivalent to the relevant Python tests
 test('problematic column parameters', 6, function(){
     // Checking escaping of custom properties
     var params = [
@@ -363,6 +365,57 @@ test('toJSCode',function(){
 	//		"mytab2.setCell(2, 0, new Date(1,1,3,4,5,6));\n"
 	//		"mytab2.setCell(2, 2, 3);\n")
 	//	,'');
+});
+
+test('toJSON',function(){
+	// The json of the initial data we load to the table.
+	var init_data_json = ("{cols:"+
+		"[{id:'a',label:'A',type:'number'},"+
+		"{id:'b',label:'b',type:'string'},"+
+		"{id:'c',label:'c',type:'boolean'}],"+
+		"rows:["+
+		"{c:[{v:1},,{v:null}]},"+
+		"{c:[,{v:'z'},{v:true}]}"+
+		"]}");
+		
+ 	var table = new DataTable([['a', 'number', 'A'], 'b', ['c', 'boolean']],
+		[[1],[null, 'z', true]]);
+	equal(table.numberOfRows(),2,'');
+	deepEqual(table.toJSON(),init_data_json,'');
+	
+	table.appendData([[-1, 'w', false]]);
+	equal(table.numberOfRows(),3, '');
+	equal(table.toJSON(),
+		init_data_json.substring(0,init_data_json.length-2)
+		+",{c:[{v:-1},{v:'w'},{v:false}]}]}",'');
+
+	// UNSUPPORTED: non-string object properties are not supported in Javascript
+	//var cols_json = ("{cols:"+
+	//	"[{id:'t',label:'T',type:'timeofday'},"+
+	//	"{id:'d',label:'d',type:'date'},"+
+	//	"{id:'dt',label:'dt',type:'datetime'}],");
+	//table = new DataTable({['d', 'date']: [['t', 'timeofday', 'T'],['dt', 'datetime']]});
+	//table.loadData({new Date(1, 2, 3): [new Date(0,0,0,1, 2, 3)]});
+	//equal.(table.numberOfRows(),1,'');
+	//equal(table.toJSON(['t', 'd', 'dt']),
+	//	cols_json+"rows:[{c:[{v:[1,2,3]},{v:new Date(1,1,3)},{v:null}]}]}");
+	//table.loadData({new Date(2, 3, 4): [[new Date(0,0,0,2, 3, 4), "time 2 3 4"],
+	//	new Date(1, 2, 3, 4, 5, 6)],
+	//	new Date(3, 4, 5): []});
+	//equal(table.numberOfRows,2,'');
+	//equal(table.toJSON(['t', 'd', 'dt']),cols_json+
+	//	"{c:[{v:[2,3,4],f:'time 2 3 4'},{v:new Date(2,2,4)},"+
+	//	"{v:new Date(1,1,3,4,5,6)}]},"+
+	//	"{c:[,{v:new Date(3,3,5)},{v:null}]}]}",'');
+
+	var json = ("{cols:[{id:\"a'\",label:\"a'\",type:'string'},"+
+		"{id:'b',label:\"bb'\",type:'number'}],"+
+		"rows:[{c:[{v:'a1'},{v:1}]},{c:[{v:'a2'},{v:2}]},"+
+		"{c:[{v:'a3'},{v:3}]}]}");
+	table = new DataTable({"a'": ['b', 'number', "bb'", {}]},
+		{'a1': 1, 'a2': 2, 'a3': 3});
+	equal(table.numberOfRows(),3);
+	equal(table.toJSON(),json);
 });
 
 test('custom properties',function(){
