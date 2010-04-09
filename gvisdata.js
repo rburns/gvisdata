@@ -426,7 +426,7 @@ function DataTable(tableDescription, data, customProperties) {
 	 */
 	this.toJSON = function(columnOrder, orderBy) {
 		if( arguments.length == 0 || columnOrder == null ) {
-			var columnOrder = [];
+			columnOrder = [];
 			for( var i in this._columns ) {	columnOrder.push(this._columns[i].id); }
 		}
 		var colDict = {};
@@ -494,6 +494,83 @@ function DataTable(tableDescription, data, customProperties) {
 		var json = "{cols:["+colJSON.join(',')+"],rows:["+rowJSON.join(',')+"]"+genCustomProperties+"}";
 		return json;
 	};
+
+	/**
+	 * Writes the data table as a CSV string.
+	 * 
+	 * Args:
+	 *   columns_order: Optional. Specifies the order of columns in the
+	 *                  output table. Specify a list of all column IDs in the order
+	 *                  in which you want the table created.
+	 *                  Note that you must list all column IDs in this parameter,
+	 *                  if you use it.
+	 *   order_by: Optional. Specifies the name of the column(s) to sort by.
+	 *             Passed as is to _PreparedData.
+	 *   separator: Optional. The separator to use between the values.
+	 * 
+	 * Returns:
+	 *   A CSV string representing the table.
+	 *   Example result:
+	 *    'a', 'b', 'c'
+	 *    1, 'z', 2
+	 *    3, 'w', ''
+	 * 
+	 * Raises:
+	 *   DataTableException: The data does not match the type.
+	 */
+	this.toCSV = function(columnOrder, orderBy, separator) {
+		if( arguments.length < 3 ) { separator = ', '; }
+		if( arguments.length < 2 ) { orderBy = []; }
+		if( arguments.length < 1 ) { columnOrder= null; }
+		
+		if( columnOrder == null ) {
+			columnOrder = [];
+			for( var i in this._columns ) {	columnOrder.push(this._columns[i].id); }
+		}
+		var colDict = {};
+		for( var i in this._columns ) { colDict[this._columns[i].id] = this._columns[i]; }
+
+		var columnList = [];
+		for( var i in columnOrder ) {
+			columnList.push(DataTable._escapeValueForCSV(colDict[columnOrder[i]].label));
+		}
+		var columnLine = columnList.join(separator);
+
+		var rowList = [];
+		// We now go over the data and add each row
+		var prepData = this.preparedData(orderBy);
+		for( var i in prepData ) {
+			var row = prepData[i][0];
+			var cellList = [];
+			// We add all the elements of this row by their order
+			for( var j in columnOrder ) {
+				var col = columnOrder[j];
+				var value = '""';
+				//row.some(function(e){ return e == col}) &&
+				if( row[col] != null ) {
+					value = DataTable.singleValueToJS(row[col], colDict[col].type,
+						DataTable._escapeValueForCSV);
+				}
+				if( DataTable._t.isArray(value) ) {
+					// We have a formatted value. Using it only for date/time types.
+					if( ['date', 'datetime', 'timeofday'].some(function(e){ return e == colDict[col].type; }) ) {
+						cellList.push(value[1]);
+					} else {
+						cellList.push(value[0]);
+					}
+				} else {
+					// We need to quote date types, because they contain commas.
+					if( value != '""' &&
+						['date', 'datetime', 'timeofday'].some(function(e){ return e == colDict[col].type; }) ) {
+						value = '"'+value+'"';
+					}
+					cellList.push(value); 
+				}
+			}
+			rowList.push(cellList.join(separator));
+		}
+		return columnLine+'\n'+rowList.join('\n');
+	}
 
 	/*
 	 * Initialization
@@ -869,7 +946,7 @@ DataTable.tableDescriptionParser = function(tableDescription, depth) {
 
 // Puts the string in quotes, and escapes any inner quotes and slashes.
 DataTable._escapeValue = function(v) {
-	//FIXME this surely isn't strictly correct. It passes the tests
+	// FIXME this surely isn't strictly correct. It passes the tests
 	var result = String(v)
 	var q = result.indexOf("'") > -1 ? '"' : "'";
 
@@ -887,6 +964,22 @@ DataTable._escapeCustomProperties = function(properties) {
 	}
 	return '{'+l.join(',')+'}';
 };
+
+/*
+ * Escapes the value for use in a CSV file.
+ * 
+ *  Puts the string in double-quotes, and escapes any inner double-quotes by
+ *  doubling them.
+ * 
+ *  Args:
+ *    v: The value to escape.
+ * 
+ *  Returns:
+ *    The escaped values.
+ */
+DataTable._escapeValueForCSV = function(value) {
+	return '"'+value.replace('"', '""')+'"'
+}
 
 // type detection
 DataTable._t = {

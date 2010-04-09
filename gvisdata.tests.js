@@ -369,6 +369,7 @@ test('toJSCode',function(){
 
 test('toJSON',function(){
 	// The json of the initial data we load to the table.
+	// FIXME this json is invalid
 	var init_data_json = ("{cols:"+
 		"[{id:'a',label:'A',type:'number'},"+
 		"{id:'b',label:'b',type:'string'},"+
@@ -408,12 +409,13 @@ test('toJSON',function(){
 	//	"{v:new Date(1,1,3,4,5,6)}]},"+
 	//	"{c:[,{v:new Date(3,3,5)},{v:null}]}]}",'');
 
+	// FIXME this json is invalid
 	var json = ("{cols:[{id:\"a'\",label:\"a'\",type:'string'},"+
 		"{id:'b',label:\"bb'\",type:'number'}],"+
 		"rows:[{c:[{v:'a1'},{v:1}]},{c:[{v:'a2'},{v:2}]},"+
 		"{c:[{v:'a3'},{v:3}]}]}");
 	table = new DataTable({"a'": ['b', 'number', "bb'", {}]},
-		{'a1': 1, 'a2': 2, 'a3': 3});
+		{a1: 1, a2: 2, a3: 3});
 	equal(table.numberOfRows(),3);
 	equal(table.toJSON(),json);
 });
@@ -458,8 +460,31 @@ test('custom properties',function(){
     equal(table.toJSCode("mytab"), jscode, 'Correct JSCode output');
 });
 
+test('toCSV',function(){
+	var init_data_csv = ['"A", "b", "c"','1, "", ""','"", "zz\'top", true'].join('\n');
+	var table = new DataTable([['a', 'number', 'A'], 'b', ['c', 'boolean']],
+		[[[1, '$1']], [null, "zz'top", true]]);
+	equal(table.toCSV(),init_data_csv);	
+	table.appendData([[-1, 'w', false]]);
+	equal(table.toCSV(),init_data_csv+'\n-1, "w", false');
+
+	// UNSUPPORTED: non-string object properties are not supported in Javascript
+	//init_data_csv = [
+	//	'"T", "d", "dt"',
+	//	'"[1,2,3]", "new Date(1,1,3)", ""',
+	//	'"time ""2 3 4""", "new Date(2,2,4)", "new Date(1,1,3,4,5,6)"',
+	//	'"", "new Date(3,3,5)", ""'].join('\n');
+	//table = new DataTable({['d', 'date']: [['t', 'timeofday', 'T'],
+	//	['dt', 'datetime']]});
+	//table.loadData({new Date(1, 2, 3): [new Date(1,2,3,1, 2, 3)],
+	//	new Date(2, 3, 4): [[new Date(1,2,4,2, 3, 4), 'time "2 3 4"'],
+	//		new Date(1, 2, 3, 4, 5, 6)],
+	//	new Date(3, 4, 5): []});
+	//equal(table.ToCsv(["t", "d", "dt"]), init_data_csv);
+});
+
 /**
- * The following tests are not part of the Python test suite
+ * The following tests are not part of the gv-python test suite
  */
 
 test('toJSCode - extra',function(){
