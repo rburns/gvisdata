@@ -483,6 +483,17 @@ test('toCSV',function(){
 	//equal(table.ToCsv(["t", "d", "dt"]), init_data_csv);
 });
 
+test('toTSVExcel',function(){
+	// UNSUPPORTED: non-string object properties are not supported in Javascript
+	//var table = new DataTable({['d', 'date']: [['t', 'timeofday', 'T'],
+	//                                   ['dt', 'datetime']]});
+	//table.loadData({new Date(1, 2, 3): [new Date(1,2,3,1, 2, 3)],
+	//                new Date(2, 3, 4): [[new Date(2,3,4,2, 3, 4), 'time "2 3 4"'],
+	//                                 new Date(1, 2, 3, 4, 5, 6)],
+	//                new Date(3, 4, 5): []})
+	//equal(table.toTSVExcel(),table.toCSV().replace(", ", "\t")/*.encode("UTF-16LE")*/);
+});
+
 /**
  * The following tests are not part of the gv-python test suite
  */
@@ -510,6 +521,14 @@ test('toJSCode - extra',function(){
 			"mytab.setCell(2, 1, 'two');\n"+
 			"mytab.setCell(2, 2, 'one');\n")
 		,'Outputs correct Javascript representation with column ordering');
+});
+
+test('toTSVExcel - extra',function(){
+	var table = new DataTable({a: [['t', 'timeofday', 'T'],['dt', 'datetime']]});
+	table.loadData({1: [new Date(1,2,3,1, 2, 3)],
+	                2: [[new Date(2,3,4,2, 3, 4), 'time "2 3 4"'],new Date(1, 2, 3, 4, 5, 6)],
+	                3: []})
+	equal(table.toTSVExcel(),table.toCSV().replace(/, /g, "\t"));
 });
 
 test('type detection',function(){

@@ -573,6 +573,26 @@ function DataTable(tableDescription, data, customProperties) {
 	}
 
 	/*
+	 * Returns a file in tab-separated-format readable by MS Excel.
+	 * 
+	 * Returns a file in UTF-16 little endian encoding, with tabs separating the
+	 * values.
+	 * 
+	 * Args:
+	 *   columns_order: Delegated to ToCsv.
+	 *   order_by: Delegated to ToCsv.
+	 * 
+	 * Returns:
+	 *   A tab-separated little endian UTF16 file representing the table.
+	 */
+	this.toTSVExcel = function(columnOrder, orderBy) {
+		if( arguments.length < 2 ) { orderBy = []; }
+		if( arguments.length < 1 ) { columnOrder= null; }
+		
+		return this.toCSV(columnOrder, orderBy, "\t");
+	}
+
+	/*
 	 * Initialization
 	 */	
 	
