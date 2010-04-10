@@ -709,6 +709,72 @@ function DataTable(tableDescription, data, customProperties) {
 		return "%s({'version':'0.6', 'reqId':'%s', 'status':'OK', 'table': %s});"
 			.replace('%s',responseHandler).replace('%s',reqId).replace('%s',table);
 	}
+	
+	/**
+	 * Writes the right response according to the request string passed in tqx.
+	 * 
+	 * This method parses the tqx request string (format of which is defined in
+	 * the documentation for implementing a data source of Google Visualization),
+	 * and returns the right response according to the request.
+	 * It parses out the "out" parameter of tqx, calls the relevant response
+	 * (ToJSonResponse() for "json", ToCsv() for "csv", ToHtml() for "html",
+	 * ToTsvExcel() for "tsv-excel") and passes the response function the rest of
+	 * the relevant request keys.
+	 * 
+	 * Args:
+	 *  columns_order: Optional. Passed as is to the relevant response function.
+	 *  order_by: Optional. Passed as is to the relevant response function.
+	 *  tqx: Optional. The request string as received by HTTP GET. Should be in
+	 *       the format "key1:value1;key2:value2...". All keys have a default
+	 *       value, so an empty string will just do the default (which is calling
+	 *       ToJSonResponse() with no extra parameters).
+	 * 
+	 * Returns:
+	 *   A response string, as returned by the relevant response function.
+	 * 
+	 * Raises:
+	 *   DataTableException: One of the parameters passed in tqx is not supported.
+	 */
+	this.toResponse = function(columnOrder,orderBy,tqx) {
+		if( arguments.length < 3 ) { tqx = ''; }
+		if( arguments.length < 2 || orderBy == null ) { orderBy = []; }
+		if( arguments.length < 1 ) { columnOrder = null; }
+		
+		var tqxDict = {
+			version: '0.6',
+			out: 'json',
+			responseHandler: 'google.visualization.Query.setResponse',
+			reqId: 0
+		}
+		
+		if( tqx ) {
+			var options = tqx.split(';');
+			if( !options || !options.length ) { throw 'Invalid tqx provided.'; }
+			for( i in options ) {
+				var opt = options[i].split(':');
+				if( opt.length != 2 ) { throw 'Invalid tqx provided.'; }
+				tqxDict[opt[0]] = opt[1];
+			}
+		}
+		if( tqxDict.version != '0.6' ) { 
+			throw 'Version (%s) passed by request is not supported.'.replace('%s',tqxDict['version']);
+		}
+		
+		if( tqxDict.out == 'json' ) {
+			return this.toJSONResponse(columnOrder, orderBy,
+				tqxDict.reqId, tqxDict.responseHandler)
+		}
+		if( tqxDict.out == 'html' ) {
+			return this.toHTML(columnOrder,orderBy);
+		}
+		if( tqxDict.out == 'csv' ) {
+			return this.toCSV(columnOrder,orderBy);
+		}
+		if( tqxDict.out == 'tsv-excel' ) {
+			return this.toTSVExcel(columnOrder,orderBy);
+		}
+		throw "'out' parameter: '%s' is not supported".replace('%s',tqxDict.out);
+	};
 
 	/*
 	 * Initialization

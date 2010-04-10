@@ -593,6 +593,28 @@ test('toJSONResponse',function(){
 	equal(m[1], json_str.substr(1,json_str.length-2));	
 });
 
+test('toResponse',function(){
+	var description = ['col1', 'col2', 'col3'];
+	var data = [['1', '2', '3'], ['a', 'b', 'c'], ['One', 'Two', 'Three']];
+	var table = new DataTable(description, data);
+	
+	equal(table.toResponse(), table.toJSONResponse());
+	equal(table.toResponse(null,null,'out:csv'), table.toCSV());
+	equal(table.toResponse(null,null,'out:html'), table.toHTML());
+	exception(function(){table.toResponse(null,null,'version:0.1');},
+		'Raises exception on invalid version');
+	equal(table.toResponse(null,null,'reqId:4;responseHandler:handle'),
+		table.toJSONResponse(null,null,4,'handle'));
+	equal(table.toResponse(null,null,'out:csv;reqId:4'), table.toCSV());
+	equal(table.toResponse(null,'col2'), table.toJSONResponse(null,'col2'));
+	equal(table.toResponse(['col3','col2','col1'],null,'out:html'),
+		table.toHTML(['col3','col2','col1']));
+	exception(function(){table.toResponse(null,null,'SomeWrongTqxFormat')},
+		'Raises exception on invalid tqx');
+	exception(function(){table.toResponse(null,null,'out:bad');},
+		'Raises exception on invalid format');
+});
+
 /**
  * The following tests are not part of the gv-python test suite
  */
