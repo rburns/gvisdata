@@ -265,25 +265,28 @@ function DataTable(tableDescription, data, customProperties) {
 			(orderBy[1].toLowerCase() == 'asc' || orderBy[1].toLowerCase() == 'desc')) ) {
 			orderBy = [orderBy,];
 		}
+
 		for( i in orderBy ) {
 			if( DataTable._t.isString(orderBy[i]) ) {
 				properSortKeys.push([orderBy[i], 1]);
-			} else if(DataTable._t.isArray(orderBy && orderBy.length == 2) &&
-				(orderBy[1].toLowerCase() == 'asc' || orderBy[1].toLowerCase() == 'desc')) {
-				properSortKeys.push([orderBy[0], orderBy[1].lower() == 'asc' ? 1 : -1]);
+			} else if((DataTable._t.isArray(orderBy[i]) && orderBy[i].length == 2) &&
+				(orderBy[i][1].toLowerCase() == 'asc' || orderBy[i][1].toLowerCase() == 'desc')) {
+				properSortKeys.push([orderBy[i][0], orderBy[i][1].toLowerCase() == 'asc' ? 1 : -1]);
 			} else {
-				throw 'Expected tuple with second value: \'asc\' or \'desc\'';
+				throw 'Expected array with second value: \'asc\' or \'desc\'';
 			}			
 		}
 
-		return this._data.sort(function(row1,row2){
-      		for( i in properSortKeys ) {
-      			var key = properSortKeys[0],
-      				ascMult = properSortKeys[1];
-        		cmpResult = ascMult * (row1[0][key] > row2[0][key] ? 1 : -1);
-        		if( cmpResult ) { return cmp_result; }
-        	}
-      		return 0;
+		return DataTable._o.clone(this._data).sort(function(row1,row2){
+			for( i in properSortKeys ) {
+				var key = properSortKeys[i][0],
+					ascMult = properSortKeys[i][1];
+				var a = row1[0][key],
+					b = row2[0][key];
+				var cmpResult = ascMult * (a == b ? 0 : a < b ? -1 : 1);
+				if( cmpResult ) { return cmpResult; }
+			}
+			return 0;
 		});
 	};
 

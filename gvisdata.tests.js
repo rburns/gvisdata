@@ -529,6 +529,41 @@ test('toHTML',function(){
 	//equal(table.toHTML(['t', 'd', 'dt']),init_data_html.replace("\n", ""))         
 });
 
+test('orderBy',function(){
+	var data = [['b', 3], ['a', 3], ['a', 2], ['b', 1]];
+	// MODIFIED original uses scalar columns defs, ['col1', ('col2', 'number', 'Second Column')]
+	var description = [['col1'], ['col2', 'number', 'Second Column']];
+	var table = new DataTable(description, data);
+
+	var first = DataTable._o.clone(data);
+    var numSorted = new DataTable(description,first.sort(function(a,b){
+    	if ( a[1] == b[1] ) { return a[0] < b[0] ? -1 : 1; }
+    	else { return a[1] < b[1] ? -1 : 1; }
+    	return 0;
+	}));
+    
+	var second = DataTable._o.clone(data);
+	var strSorted = new DataTable(description,second.sort(function(a,b){
+		return 	a[0] == b[0] ? 0 : a[0] < b[0] ? -1 : 1;
+	}));
+	
+	var third = DataTable._o.clone(data);
+	var diffSorted = new DataTable(description,third.sort(function(a,b){
+		return 	a[1] == b[1] ? 0 : a[1] > b[1] ? -1 : 1;	
+	}).sort(function(a,b){
+		return 	a[0] == b[0] ? 0 : a[0] > b[0] ? -1 : 1;	
+	}));
+
+	equal(table.toJSON(null,['col2', 'col1']), numSorted.toJSON());
+	equal(table.toJSCode('mytab',null,['col2', 'col1']), numSorted.toJSCode('mytab'));
+
+	equal(table.toJSON(null,'col1'), strSorted.toJSON());
+	equal(table.toJSCode('mytab',null,'col1'), strSorted.toJSCode('mytab'));
+
+	equal(table.toJSON(null,[['col1', 'desc'], 'col2']), diffSorted.toJSON());
+	equal(table.toJSCode('mytab',null,[['col1', 'desc'], 'col2']), diffSorted.toJSCode('mytab'));
+});
+
 /**
  * The following tests are not part of the gv-python test suite
  */
