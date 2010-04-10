@@ -671,6 +671,44 @@ function DataTable(tableDescription, data, customProperties) {
 		var bodyHTML = bodyTemp.replace(/%s/g,rowList.join(''));
 		return tableTemp.replace(/%s/g,headHTML + bodyHTML);
 	};
+	
+	/**
+	 * Writes a table as a JSON response that can be returned as-is to a client.
+	 * 
+	 * This method writes a JSON response to return to a client in response to a
+	 * Google Visualization API query. This string can be processed by the calling
+	 * page, and is used to deliver a data table to a visualization hosted on
+	 * a different page.
+	 * 
+	 * Args:
+	 *   columns_order: Optional. Passed straight to self.ToJSon().
+	 *   order_by: Optional. Passed straight to self.ToJSon().
+	 *   req_id: Optional. The response id, as retrieved by the request.
+	 *   response_handler: Optional. The response handler, as retrieved by the
+	 *       request.
+	 * 
+	 * Returns:
+	 *   A JSON response string to be received by JS the visualization Query
+	 *   object. This response would be translated into a DataTable on the
+	 *   client side.
+	 *   Example result (newlines added for readability):
+	 *    google.visualization.Query.setResponse({
+	 *       'version':'0.6', 'reqId':'0', 'status':'OK',
+	 *       'table': {cols: [...], rows: [...]}});
+	 * 
+	 * Note: The URL returning this string can be used as a data source by Google
+	 *       Visualization Gadgets or from JS code.
+	 */
+	this.toJSONResponse = function(columnOrder,orderBy,reqId,responseHandler) {
+		if( arguments.length < 4 ) { responseHandler = 'google.visualization.Query.setResponse'; }
+		if( arguments.length < 3 ) { reqId = 0; }
+		if( arguments.length < 2 || orderBy == null ) { orderBy = []; }		
+		if( arguments.length < 1 ) { columnOrder = null; }
+
+		var table = this.toJSON(columnOrder, orderBy);
+		return "%s({'version':'0.6', 'reqId':'%s', 'status':'OK', 'table': %s});"
+			.replace('%s',responseHandler).replace('%s',reqId).replace('%s',table);
+	}
 
 	/*
 	 * Initialization
@@ -973,8 +1011,7 @@ DataTable.tableDescriptionParser = function(tableDescription, depth) {
 
 	// For the recursion step, we check for a string or an array of strings
 	// which are assumed to not be column definitions
-	if( _t.isString(tableDescription) || ( _t.isArray(tableDescription) &&
-		_t.isString(tableDescription[0]) && tableDescription.length < 5) ) {
+	if( DataTable._isColumnDesc(tableDescription) ) {
 		var parsedCol = DataTable.columnTypeParser(tableDescription);
 		parsedCol.depth = depth;
 		parsedCol.container = 'scalar';
@@ -1089,6 +1126,19 @@ DataTable._escapeHTML = function(value) {
 		.replace(/</g,'&lt;')
 		.replace(/"/g,'&quot;');
 }
+
+// a fallable heuristic to determine if a value is a column definition
+DataTable._isColumnDesc = function(value) {
+	if( DataTable._t.isString(value) ) { return true; }
+	if( DataTable._t.isArray(value) ) {
+		if( value.length == 1 ) { return false; }
+		if( !DataTable._t.isString(value[1]) ) { return false; }
+		if( [
+			'string','number','boolean','date','timeofday','datetime'
+		].some(function(e){ return e == value[1]}) ) { return true; }
+	}
+	return false;
+};
 
 // type detection
 DataTable._t = {

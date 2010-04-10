@@ -531,8 +531,7 @@ test('toHTML',function(){
 
 test('orderBy',function(){
 	var data = [['b', 3], ['a', 3], ['a', 2], ['b', 1]];
-	// MODIFIED original uses scalar columns defs, ['col1', ('col2', 'number', 'Second Column')]
-	var description = [['col1'], ['col2', 'number', 'Second Column']];
+	var description = ['col1', ['col2', 'number', 'Second Column']];
 	var table = new DataTable(description, data);
 
 	var first = DataTable._o.clone(data);
@@ -562,6 +561,36 @@ test('orderBy',function(){
 
 	equal(table.toJSON(null,[['col1', 'desc'], 'col2']), diffSorted.toJSON());
 	equal(table.toJSCode('mytab',null,[['col1', 'desc'], 'col2']), diffSorted.toJSCode('mytab'));
+});
+
+test('toJSONResponse',function(){
+	var description = ['col1', 'col2', 'col3'];
+	var data = [['1', '2', '3'], ['a', 'b', 'c'], ['One', 'Two', 'Three']];
+	var req_id = 4;
+	var table = new DataTable(description, data);
+
+	var start_str_default = 'google.visualization.Query.setResponse';
+	var start_str_handler = 'MyHandlerFunction';
+	var default_params = ("'version':'0.6', 'reqId':'%s', 'status':'OK'"
+		.replace('%s',req_id));
+	var regex1 = new RegExp("%s\\\(\\\{%s, 'table': \\\{(.*)\\\}\\\}\\\);"
+		.replace('%s',start_str_default).replace('%s',default_params));
+	var regex2 = new RegExp("%s\\\(\\\{%s, 'table': \\\{(.*)\\\}\\\}\\\);"
+		.replace('%s',start_str_handler).replace('%s',default_params));
+
+	var json_str = table.toJSON();
+	
+	var json_response = table.toJSONResponse(null,null,req_id);
+	var m = regex1.exec(json_response);
+	equal(m.length, 2);
+	// We want to match against the json_str without the curly brackets.
+	equal(m[1], json_str.substr(1,json_str.length-2));
+
+	json_response = table.toJSONResponse(null,null,req_id,start_str_handler);
+	m = regex2.exec(json_response);
+	equal(m.length, 2);
+	// We want to match against the json_str without the curly brackets.
+	equal(m[1], json_str.substr(1,json_str.length-2));	
 });
 
 /**
@@ -605,6 +634,12 @@ test('toTSVExcel - extra',function(){
 	                2: [[new Date(2,3,4,2, 3, 4), 'time "2 3 4"'],new Date(1, 2, 3, 4, 5, 6)],
 	                3: []})
 	equal(table.toTSVExcel(),table.toCSV().replace(/, /g, "\t"));
+});
+
+test('_isColumnDesc',function(){
+	ok(!DataTable._isColumnDesc([['a', 'number', 'A'], 'b', ['c', 'boolean']]));
+	ok(DataTable._isColumnDesc(['a', 'number', 'A']));
+	ok(DataTable._isColumnDesc(['c', 'boolean']));	
 });
 
 test('type detection',function(){
