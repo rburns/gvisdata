@@ -319,11 +319,7 @@ var QUnit = {
 			thrown = true; 
 		} 
 		
-		QUnit.log(thrown, msg);
-		config.assertions.push({
-			result: !!thrown,
-			message: msg
-		}); 
+		QUnit.ok(thrown,msg);
 	}, 
 	
 	start: function() {
