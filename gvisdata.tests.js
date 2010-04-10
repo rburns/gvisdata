@@ -494,9 +494,50 @@ test('toTSVExcel',function(){
 	//equal(table.toTSVExcel(),table.toCSV().replace(", ", "\t")/*.encode("UTF-16LE")*/);
 });
 
+test('toHTML',function(){
+	var html_table_header = "<html><body><table border='1'>";
+	var html_table_footer = "</table></body></html>";
+	var init_data_html = html_table_header + (
+		"<thead><tr>"+
+		"<th>A&lt;</th><th>b&gt;</th><th>c</th>"+
+		"</tr></thead>"+
+		"<tbody>"+
+		"<tr><td>'$1'</td><td></td><td></td></tr>"+
+		"<tr><td></td><td>'&lt;z&gt;'</td><td>true</td></tr>"+
+		"</tbody>") + html_table_footer;
+    var table = new DataTable([['a', 'number', 'A<'], 'b>', ['c', 'boolean']],
+                      [[[1, '$1']], [null, '<z>', true]]);
+	equal(table.toHTML(), init_data_html.replace("\n", ""));
+
+	// UNSUPPORTED: non-string object properties are not supported in Javascript
+	//var init_data_html = html_table_header + (
+	//	"<thead><tr>"+
+	//	"<th>T</th><th>d</th><th>dt</th>"+
+	//	"</tr></thead>"+
+	//	"<tbody>"+
+	//	"<tr><td>[1,2,3]</td><td>new Date(1,1,3)</td><td></td></tr>"+
+	//	"<tr><td>'time 2 3 4'</td><td>new Date(2,2,4)</td>"+
+	//	"<td>new Date(1,1,3,4,5,6)</td></tr>"+
+	//	"<tr><td></td><td>new Date(3,3,5)</td><td></td></tr>"+
+	//	"</tbody>") + html_table_footer;
+	//var table = new DataTable({['d', 'date']: [['t', 'timeofday', 'T'],
+	//	['dt', 'datetime']]});
+	//table.loadData({new Date(1, 2, 3): [new Date(1,2,3,1, 2, 3)],
+	//                new Date(2, 3, 4): [[new Date(2,3,4,2, 3, 4), "time 2 3 4"],
+	//                                new Date(1, 2, 3, 4, 5, 6)],
+	//                new Date(3, 4, 5): []});
+	//equal(table.toHTML(['t', 'd', 'dt']),init_data_html.replace("\n", ""))         
+});
+
 /**
  * The following tests are not part of the gv-python test suite
  */
+ 
+test('DataTable.singleValueToJS - extra',function(){
+	equal(DataTable.singleValueToJS('<<','string'),"'<<'",'< is not escaped');
+	equal(DataTable.singleValueToJS('>>','string'),"'>>'",'> is not escaped');
+	equal(DataTable.singleValueToJS('$$','string'),"'$$'",'$ is not escaped');
+});
 
 test('toJSCode - extra',function(){
 	var table = new DataTable([['a'], ['b'], ['c']],[

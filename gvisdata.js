@@ -546,7 +546,6 @@ function DataTable(tableDescription, data, customProperties) {
 			for( var j in columnOrder ) {
 				var col = columnOrder[j];
 				var value = '""';
-				//row.some(function(e){ return e == col}) &&
 				if( row[col] != null ) {
 					value = DataTable.singleValueToJS(row[col], colDict[col].type,
 						DataTable._escapeValueForCSV);
@@ -591,6 +590,84 @@ function DataTable(tableDescription, data, customProperties) {
 		
 		return this.toCSV(columnOrder, orderBy, "\t");
 	}
+	
+	/**
+	 * Writes the data table as an HTML table code string.
+	 * 
+	 * Args:
+	 *   columns_order: Optional. Specifies the order of columns in the
+	 *                  output table. Specify a list of all column IDs in the order
+	 *                  in which you want the table created.
+	 *                  Note that you must list all column IDs in this parameter,
+	 *                  if you use it.
+	 *  order_by: Optional. Specifies the name of the column(s) to sort by.
+	 *             Passed as is to _PreparedData.
+	 * 
+	 * Returns:
+	 *  An HTML table code string.
+	 *   Example result (the result is without the newlines):
+	 *    <html><body><table border='1'>
+	 *     <thead><tr><th>a</th><th>b</th><th>c</th></tr></thead>
+	 *     <tbody>
+	 *      <tr><td>1</td><td>"z"</td><td>2</td></tr>
+	 *      <tr><td>"3$"</td><td>"w"</td><td></td></tr>
+	 *     </tbody>
+	 *   </table></body></html>
+	 * 
+	 * Raises:
+	 *  DataTableException: The data does not match the type.
+	 */
+	this.toHTML = function(columnOrder, orderBy) {
+		if( arguments.length < 2 ) { orderBy = []; }
+		if( arguments.length < 1 ) { columnOrder= null; }
+
+		var tableTemp = "<html><body><table border='1'>%s</table></body></html>";
+		var colTemp = "<thead><tr>%s</tr></thead>";
+		var bodyTemp = "<tbody>%s</tbody>";
+		var rowTemp = "<tr>%s</tr>";
+		var headerCellTemp = "<th>%s</th>";
+		var cellTemp = "<td>%s</td>";
+
+		if( columnOrder == null ) {
+			columnOrder = [];
+			for( var i in this._columns ) {	columnOrder.push(this._columns[i].id); }
+		}
+		var colDict = {};
+		for( var i in this._columns ) { colDict[this._columns[i].id] = this._columns[i]; }
+		
+		var columnList = [];
+		for( var i in columnOrder ) {
+			col = columnOrder[i];
+			columnList.push(headerCellTemp.replace(/%s/g,DataTable._escapeHTML(colDict[col].label)));
+		}
+		var headHTML = colTemp.replace(/%s/g,columnList.join(''));
+		
+		var rowList = [];
+		// We now go over the data and add each row
+		var prepData = this.preparedData(orderBy);
+		for( var i in prepData ) {
+			var row = prepData[i][0];
+			var cellList = [];
+			// We add all the elements of this row by their order
+			for( var j in columnOrder ) {
+				var col = columnOrder[j];
+				// For empty string we want empty quotes ("").
+				var value = "";
+				if( row[col] != null ) {
+					value = DataTable.singleValueToJS(row[col], colDict[col].type);
+				}
+				if( DataTable._t.isArray(value) ) {
+					// We have a formatted value and we're going to use it
+					cellList.push(cellTemp.replace(/%s/g,DataTable._escapeHTML(value[1])));
+				} else {
+					cellList.push(cellTemp.replace(/%s/g,DataTable._escapeHTML(value)));
+				}
+			}
+			rowList.push(rowTemp.replace(/%s/g,cellList.join('')));
+		}
+		var bodyHTML = bodyTemp.replace(/%s/g,rowList.join(''));
+		return tableTemp.replace(/%s/g,headHTML + bodyHTML);
+	};
 
 	/*
 	 * Initialization
@@ -971,7 +1048,8 @@ DataTable._escapeValue = function(v) {
 	var q = result.indexOf("'") > -1 ? '"' : "'";
 
 	result = escape(result)
-		.replace('%24','$').replace('%27',"'");
+		.replace(/%3C/g,'<').replace(/%3E/g,'>')
+		.replace(/%24/g,'$').replace(/%27/g,"'");
 
 	return q+result+q;
 };
@@ -999,6 +1077,14 @@ DataTable._escapeCustomProperties = function(properties) {
  */
 DataTable._escapeValueForCSV = function(value) {
 	return '"'+value.replace('"', '""')+'"'
+}
+
+// convert appropriate characters to html entities
+DataTable._escapeHTML = function(value) {
+	return value.replace(/&/g,'&amp;')
+		.replace(/>/g,'&gt;')
+		.replace(/</g,'&lt;')
+		.replace(/"/g,'&quot;');
 }
 
 // type detection
