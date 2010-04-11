@@ -6,67 +6,47 @@
  *
  * You can clear all data from the object to reuse it, but you cannot clear
  * individual cells, rows, or columns. You also cannot modify the table schema
- * specified in the class constructor.
+ * specified in the constructor.
  *
  * You can add new data one or more rows at a time. All data added to an
- * instantiated DataTable must conform to the schema passed in to __init__().
+ * instantiated DataTable must conform to the schema passed in to the constructor
  *
  * You can reorder the columns in the output table, and also specify row sorting
  * order by column. The default column order is according to the original
- * table_description parameter. Default row sort order is ascending, by column
- * 1 values. For a dictionary, we sort the keys for order.
+ * tableDescription parameter. Default row sort order is ascending, by column
+ * 1 values.
  *
- * The data and the table_description are closely tied, as described here:
+ * The data and the tableDescription are closely tied, as described here:
  *
- * The table schema is defined in the class constructor's table_description
- * parameter. The user defines each column using a tuple of
- * (id[, type[, label[, custom_properties]]]). The default value for type is
- * string, label is the same as ID if not specified, and custom properties is
+ * The table schema is defined in the constructor's tableDescription
+ * parameter. The user defines each column using an array of
+ * [id,type,label,custom properties]. The default value for type is
+ * string, label is the same as ID if not specified, and customProperties is
  * an empty dictionary if not specified.
  *
- * table_description is a dictionary or list, containing one or more column
- * descriptor tuples, nested dictionaries, and lists. Each dictionary key, list
- * element, or dictionary element must eventually be defined as
- * a column description tuple. Here's an example of a dictionary where the key
- * is a tuple, and the value is a list of two tuples:
- * {('a', 'number'): [('b', 'number'), ('c', 'string')]}
+ * tableDescription is an object or array, containing one or more column
+ * descriptor arrays, nested objects, and arrays. Each obejct property, array
+ * element, or object element must eventually be defined as
+ * a column description array. 
  *
  * This flexibility in data entry enables you to build and manipulate your data
  * in a Javascript structure that makes sense for your program.
  *
  * Add data to the table using the same nested design as the table's
- * table_description, replacing column descriptor tuples with cell data, and
- * each row is an element in the top level collection. This will be a bit
+ * tableDescription, replacing column descriptor arrays with cell data, and
+ * each row as an element in the top level collection. This will be a bit
  * clearer after you look at the following examples showing the
- * table_description, matching data, and the resulting table:
+ * tableDescription, matching data, and the resulting table:
  *
- * Columns as list of tuples [col1, col2, col3]
- *   table_description: [('a', 'number'), ('b', 'string')]
- *   AppendData( [[1, 'z'], [2, 'w'], [4, 'o'], [5, 'k']] )
+ * Columns as array of arrays
+ *   tableDescription: [['a', 'number'], ['b', 'string']]
+ *   appendData( [[1, 'z'], [2, 'w'], [4, 'o'], [5, 'k']] )
  *   Table:
  *   a  b   <--- these are column ids/labels
  *   1  z
  *   2  w
  *   4  o
  *   5  k
- *
- * Dictionary of columns, where key is a column, and value is a list of
- * columns  {col1: [col2, col3]}
- *   table_description: {('a', 'number'): [('b', 'number'), ('c', 'string')]}
- *   AppendData( data: {1: [2, 'z'], 3: [4, 'w']}
- *   Table:
- *   a  b  c
- *   1  2  z
- *   3  4  w
- *
- * Dictionary where key is a column, and the value is itself a dictionary of
- * columns {col1: {col2, col3}}
- *   table_description: {('a', 'number'): {'b': 'number', 'c': 'string'}}
- *   AppendData( data: {1: {'b': 2, 'c': 'z'}, 3: {'b': 4, 'c': 'w'}}
- *   Table:
- *   a  b  c
- *   1  2  z
- *   3  4  w
  */
 
 
@@ -75,38 +55,34 @@
 /**
  * Initialize the data table from a table schema and (optionally) data.
  *
- * See the class documentation for more information on table schema and data
- * values.
- *
  * Args:
- *   table_description: A table schema, following one of the formats described
- *                      in TableDescriptionParser(). Schemas describe the
- *                      column names, data types, and labels. See
- *                      TableDescriptionParser() for acceptable formats.
+ *   tableDescription: A table schema, following one of the formats described
+ *                     in DataTable.tableDescriptionParser(). Schemas describe the
+ *                     column names, data types, and labels. See
+ *                     DataTable.tableDescriptionParser() for acceptable formats.
  *   data: Optional. If given, fills the table with the given data. The data
- *         structure must be consistent with schema in table_description. See
- *         the class documentation for more information on acceptable data. You
- *         can add data later by calling AppendData().
- *   custom_properties: Optional. A dictionary from string to string that
- *                      goes into the table's custom properties. This can be
- *                      later changed by changing this.custom_properties.
+ *         structure must be consistent with schema in tableDescription. See
+ *         the constructor documentation for more information on acceptable data. You
+ *         can add data later by calling appendData().
+ *   customProperties: Optional. An object that describes the table's custom 
+ *                     properties This can be later changed by changing 
+ *                     this.customProperties.
  *
- * Raises:
- *   DataTableException: Raised if the data and the description did not match,
- *                       or did not use the supported formats.
+ * Throws an exception if the data and the description did not match, or did not
+ * use the supported formats.
  */
 function DataTable(tableDescription, data, customProperties) {
 	/**
 	 * Loads new rows to the data table, clearing existing rows.
 	 * 
-	 * May also set the custom_properties for the added rows. The given custom
-	 * properties dictionary specifies the dictionary that will be used for *all*
-	 * given rows.
+	 * May also set the customProperties for the added rows. The given custom
+	 * properties object specifies the custom properties that will be used for 
+	 * *all* given rows.
 	 * 
 	 * Args:
 	 *   data: The rows that the table will contain.
-	 *   custom_properties: A dictionary of string to string to set as the custom
-	 *                      properties for all rows.
+	 *   customProperties: An object describing the custom properties for 
+	 *                     all rows.
 	 */
 	this.loadData = function(data, customProperties) {
 		if( arguments.length < 2 ) { customProperties = null; }
@@ -119,25 +95,24 @@ function DataTable(tableDescription, data, customProperties) {
 	 * Appends new data to the table.
 	 *
 	 * Data is appended in rows. Data must comply with
-	 * the table schema passed in to the constructor. See singleValueToJS() for a list
-	 * of acceptable data types. See the DataTable documentation for more information
-	 * and examples of schema and data values.
+	 * the table schema passed in to the constructor. See DataTable.singleValueToJS()
+	 * for a list of acceptable data types. See the Contructor documentation for more 
+	 * information and examples of schema and data values.
 	 *
 	 * Args:
 	 *  data: The row to add to the table. The data must conform to the table
 	 *        description format.
-	 *  custom_properties: A dictionary of string to string, representing the
-	 *                     custom properties to add to all the rows.
+	 *  customProperties: An object representing the custom properties to add to all
+	 *  the rows.
 	 *
-	 * Raises:
-	 *  DataTableException: The data structure does not match the description.
+	 * Throws an exception if the data structure does not match the description.
 	 */
 	this.appendData = function(data, customProperties) {
 		if( arguments.length < 2 ) { customProperties = null; }
 
 		// If the maximal depth is 0, we simply iterate over the data table
-		// lines and insert them using _InnerAppendData. Otherwise, we simply
-		// let the _InnerAppendData handle all the levels.
+		// lines and insert them using _innerAppendData. Otherwise, we simply
+		// let the _innerAppendData handle all the levels.
 		if( !(this._columns[this._columns.length-1].depth) ) {
 			for( i in data ) {
 			    // replicating python specific behaviour
@@ -188,7 +163,7 @@ function DataTable(tableDescription, data, customProperties) {
 
 		// We check if this is the last level
 		if( this._columns[colIndex].depth == this._columns[this._columns.length -1].depth ) {
-			// We need to add the keys in the dictionary as they are
+			// We need to add the properties in the object as they are
 			for( key in this._columns[colIndex] ) {
 				var curId = this._columns[colIndex][key].id;
 				if( data[curId] != null ) {
@@ -199,9 +174,9 @@ function DataTable(tableDescription, data, customProperties) {
 			return;
 		}
 	
-		// We have a dictionary in an inner depth level.
+		// We have an object in an inner depth level.
 		if( DataTable._o.prop(data).length == 0 ) {
-			// In case this is an empty dictionary, we add a record with the columns
+			// In case this is an empty object, we add a record with the columns
 			// filled only until this point.
 			this._data.push(prevColValues);
 		} else {
@@ -213,21 +188,20 @@ function DataTable(tableDescription, data, customProperties) {
 		}
 	};
 
-	// Returns the number of rows data stored in the table
+	// Returns the number of rows of data stored in the table
 	this.numberOfRows = function() {
 		return this._data.length;
 	};
 
 	/**
-	 * 	Sets the custom properties for given row(s).
+	 * Sets the custom properties for given row(s).
 	 * 
-	 * Can accept a single row or an iterable of rows.
+	 * Can accept a single row or an array of rows.
 	 * Sets the given custom properties for all specified rows.
 	 * 
 	 * Args:
 	 *   rows: The row, or rows, to set the custom properties for.
-	 *   custom_properties: A string to string dictionary of custom properties to
-	 *   set for all rows.
+	 *   customProperties: An object of custom properties to set for all rows.
 	 */
 	this.setRowsCustomProperties = function(rows,customProperties) {
 		if( !DataTable._t.isArray(rows) && !DataTable._t.isObject(rows) ) { rows = [rows]; }
@@ -237,22 +211,21 @@ function DataTable(tableDescription, data, customProperties) {
 	};
 
 	/**
-	 * Prepares the data for enumeration - sorting it by order_by.
+	 * Prepares the data for enumeration - sorting it by orderBy.
 	 * 
 	 * Args:
-	 *   order_by: Optional. Specifies the name of the column(s) to sort by, and
-	 *             (optionally) which direction to sort in. Default sort direction
-	 *             is asc. Following formats are accepted:
-	 *             "string_col_name"  -- For a single key in default (asc) order.
-	 *             ("string_col_name", "asc|desc") -- For a single key.
-	 *             [("col_1","asc|desc"), ("col_2","asc|desc")] -- For more than
-	 *                 one column, an array of tuples of (col_name, "asc|desc").
+	 *   orderBy: Optional. Specifies the name of the column(s) to sort by, and
+	 *            (optionally) which direction to sort in. Default sort direction
+	 *            is asc. Following formats are accepted:
+	 *             'string_col_name'  -- For a single key in default (asc) order.
+	 *             ['string_col_name', 'asc|desc'] -- For a single key.
+	 *             [['col_1','asc|desc'], ['col_2','asc|desc']] -- For more than
+	 *              one column, an array of arrays of [col_name, "asc|desc"].
 	 * 
 	 * Returns:
 	 *   The data sorted by the keys given.
 	 * 
-	 * Raises:
-	 *   DataTableException: Sort direction not in 'asc' or 'desc'
+	 * Throws an exception if sort direction is not 'asc' or 'desc'
 	 */
 	this.preparedData = function(orderBy) {
 		if( arguments.length == 0 || orderBy == null ) { orderBy = [] }
@@ -300,13 +273,13 @@ function DataTable(tableDescription, data, customProperties) {
 	 * Args:
 	 *   name: The name of the table. The name would be used as the DataTable's
 	 *         variable name in the created JS code.
-	 *   columns_order: Optional. Specifies the order of columns in the
-	 *                  output table. Specify a list of all column IDs in the order
-	 *                  in which you want the table created.
-	 *                  Note that you must list all column IDs in this parameter,
-	 *                  if you use it.
-	 *   order_by: Optional. Specifies the name of the column(s) to sort by.
-	 *             Passed as is to _PreparedData.
+	 *   columnOrder: Optional. Specifies the order of columns in the
+	 *                output table. Specify a list of all column IDs in the order
+	 *                in which you want the table created.
+	 *                Note that you must list all column IDs in this parameter,
+	 *                if you use it.
+	 *   orderBy: Optional. Specifies the name of the column(s) to sort by.
+	 *            Passed as is to _preparedData().
 	 * 
 	 * Returns:
 	 *   A string of JS code that, when run, generates a DataTable with the given
@@ -321,12 +294,11 @@ function DataTable(tableDescription, data, customProperties) {
 	 *      tab1.setCell(0, 1, 1, null, {'foo': 'bar'});
 	 *      tab1.setCell(0, 2, true);
 	 *      ...
-	 *       tab1.setCell(9, 0, 'c');
+	 *      tab1.setCell(9, 0, 'c');
 	 *      tab1.setCell(9, 1, 3, '3$');
 	 *      tab1.setCell(9, 2, false);"
 	 * 
-	 * Raises:
-	 *   DataTableException: The data does not match the type.
+	 * Throws an exception if the data does not match the type.
 	 */
 	this.toJSCode = function(name, columnOrder, orderBy) {
 		if( arguments.length == 1 || columnOrder == null ) {
@@ -406,13 +378,13 @@ function DataTable(tableDescription, data, customProperties) {
 	 *  }
 	 * 
 	 * Args:
-	 *   columns_order: Optional. Specifies the order of columns in the
-	 *                  output table. Specify a list of all column IDs in the order
-	 *                  in which you want the table created.
-	 *                  Note that you must list all column IDs in this parameter,
-	 *                  if you use it.
-	 *   order_by: Optional. Specifies the name of the column(s) to sort by.
-	 *             Passed as is to _PreparedData().
+	 *   columnOrder: Optional. Specifies the order of columns in the
+	 *                output table. Specify a list of all column IDs in the order
+	 *                in which you want the table created.
+	 *                Note that you must list all column IDs in this parameter,
+	 *                if you use it.
+	 *   orderBy: Optional. Specifies the name of the column(s) to sort by.
+	 *            Passed as is to _preparedData().
 	 * 
 	 * Returns:
 	 *  A JSon constructor string to generate a JS DataTable with the data
@@ -424,8 +396,7 @@ function DataTable(tableDescription, data, customProperties) {
 	 *    rows: [{c:[{v:1},{v:'z'},{v:2}]}, c:{[{v:3,f:'3$'},{v:'w'},{v:null}]}],
 	 *    p:     {'foo': 'bar'}}
 	 * 
-	 * Raises:
-	 *  DataTableException: The data does not match the type.
+	 * Throws an exception if the data does not match the type.
 	 */
 	this.toJSON = function(columnOrder, orderBy) {
 		if( arguments.length == 0 || columnOrder == null ) {
@@ -502,13 +473,13 @@ function DataTable(tableDescription, data, customProperties) {
 	 * Writes the data table as a CSV string.
 	 * 
 	 * Args:
-	 *   columns_order: Optional. Specifies the order of columns in the
-	 *                  output table. Specify a list of all column IDs in the order
-	 *                  in which you want the table created.
-	 *                  Note that you must list all column IDs in this parameter,
-	 *                  if you use it.
-	 *   order_by: Optional. Specifies the name of the column(s) to sort by.
-	 *             Passed as is to _PreparedData.
+	 *   columnOrder: Optional. Specifies the order of columns in the
+	 *                output table. Specify a list of all column IDs in the order
+	 *                in which you want the table created.
+	 *                Note that you must list all column IDs in this parameter,
+	 *                if you use it.
+	 *   orderBy: Optional. Specifies the name of the column(s) to sort by.
+	 *            Passed as is to _PreparedData.
 	 *   separator: Optional. The separator to use between the values.
 	 * 
 	 * Returns:
@@ -518,8 +489,7 @@ function DataTable(tableDescription, data, customProperties) {
 	 *    1, 'z', 2
 	 *    3, 'w', ''
 	 * 
-	 * Raises:
-	 *   DataTableException: The data does not match the type.
+	 * Throws an exception if the data does not match the type.
 	 */
 	this.toCSV = function(columnOrder, orderBy, separator) {
 		if( arguments.length < 3 ) { separator = ', '; }
@@ -581,8 +551,8 @@ function DataTable(tableDescription, data, customProperties) {
 	 * values.
 	 * 
 	 * Args:
-	 *   columns_order: Delegated to ToCsv.
-	 *   order_by: Delegated to ToCsv.
+	 *   columnOrder: Delegated to toCsv().
+	 *   orderBy: Delegated to toCsv().
 	 * 
 	 * Returns:
 	 *   A tab-separated little endian UTF16 file representing the table.
@@ -598,13 +568,13 @@ function DataTable(tableDescription, data, customProperties) {
 	 * Writes the data table as an HTML table code string.
 	 * 
 	 * Args:
-	 *   columns_order: Optional. Specifies the order of columns in the
-	 *                  output table. Specify a list of all column IDs in the order
-	 *                  in which you want the table created.
-	 *                  Note that you must list all column IDs in this parameter,
-	 *                  if you use it.
-	 *  order_by: Optional. Specifies the name of the column(s) to sort by.
-	 *             Passed as is to _PreparedData.
+	 *   columnOrder: Optional. Specifies the order of columns in the
+	 *                output table. Specify a list of all column IDs in the order
+	 *                in which you want the table created.
+	 *                Note that you must list all column IDs in this parameter,
+	 *                if you use it.
+	 *   orderBy: Optional. Specifies the name of the column(s) to sort by.
+	 *            Passed as is to _preparedData().
 	 * 
 	 * Returns:
 	 *  An HTML table code string.
@@ -617,8 +587,7 @@ function DataTable(tableDescription, data, customProperties) {
 	 *     </tbody>
 	 *   </table></body></html>
 	 * 
-	 * Raises:
-	 *  DataTableException: The data does not match the type.
+	 * Throws an exception if the data does not match the type.
 	 */
 	this.toHTML = function(columnOrder, orderBy) {
 		if( arguments.length < 2 ) { orderBy = []; }
@@ -681,10 +650,10 @@ function DataTable(tableDescription, data, customProperties) {
 	 * a different page.
 	 * 
 	 * Args:
-	 *   columns_order: Optional. Passed straight to self.ToJSon().
-	 *   order_by: Optional. Passed straight to self.ToJSon().
-	 *   req_id: Optional. The response id, as retrieved by the request.
-	 *   response_handler: Optional. The response handler, as retrieved by the
+	 *   columnOrder: Optional. Passed straight to self.toJSON().
+	 *   orderBy: Optional. Passed straight to self.toJSON().
+	 *   reqId: Optional. The response id, as retrieved by the request.
+	 *   responseHandler: Optional. The response handler, as retrieved by the
 	 *       request.
 	 * 
 	 * Returns:
@@ -717,13 +686,13 @@ function DataTable(tableDescription, data, customProperties) {
 	 * the documentation for implementing a data source of Google Visualization),
 	 * and returns the right response according to the request.
 	 * It parses out the "out" parameter of tqx, calls the relevant response
-	 * (ToJSonResponse() for "json", ToCsv() for "csv", ToHtml() for "html",
-	 * ToTsvExcel() for "tsv-excel") and passes the response function the rest of
+	 * (toJSONResponse() for "json", toCSV() for "csv", toHTML() for "html",
+	 * toTSVExcel() for "tsv-excel") and passes the response function the rest of
 	 * the relevant request keys.
 	 * 
 	 * Args:
-	 *  columns_order: Optional. Passed as is to the relevant response function.
-	 *  order_by: Optional. Passed as is to the relevant response function.
+	 *  columnOrder: Optional. Passed as is to the relevant response function.
+	 *  orderBy: Optional. Passed as is to the relevant response function.
 	 *  tqx: Optional. The request string as received by HTTP GET. Should be in
 	 *       the format "key1:value1;key2:value2...". All keys have a default
 	 *       value, so an empty string will just do the default (which is calling
@@ -732,8 +701,7 @@ function DataTable(tableDescription, data, customProperties) {
 	 * Returns:
 	 *   A response string, as returned by the relevant response function.
 	 * 
-	 * Raises:
-	 *   DataTableException: One of the parameters passed in tqx is not supported.
+	 * Throws an exception if one of the parameters passed in tqx is not supported.
 	 */
 	this.toResponse = function(columnOrder,orderBy,tqx) {
 		if( arguments.length < 3 ) { tqx = ''; }
@@ -807,8 +775,8 @@ function DataTable(tableDescription, data, customProperties) {
  *  The proper JS format (as string) of the given value according to the
  *  given value_type. For null, we simply return "null".
  *  If an array is given, it should be in one of the following forms:
- *   - (value, formatted value)
- *   - (value, formatted value, custom properties)
+ *   - [value, formatted value]
+ *   - [value, formatted value, custom properties]
  *  where the formatted value is a string, and custom properties is a
  *  dictionary of the custom properties for this cell.
  *  To specify custom properties without specifying formatted value, one can
@@ -816,20 +784,19 @@ function DataTable(tableDescription, data, customProperties) {
  *  One can also have a null-valued cell with formatted value and/or custom
  *  properties by specifying null for the value.
  *  This method ignores the custom properties except for checking that it is a
- *  dictionary. The custom properties are handled in the ToJSon and ToJSCode
+ *  dictionary. The custom properties are handled in the toJSON() and toJSCode()
  *  methods.
  *  The real type of the given value is not strictly checked. For example,
  *  any type can be used for string - as we simply convert it with String() and for
  *  boolean value we just check "if( value )".
  *  Examples:
  *    singleValueToJS(null, "boolean") returns "null"
- *    singleValueToJS(False, "boolean") returns "false"
- *    singleValueToJS((5, "5$"), "number") returns ("5", "'5$'")
- *    singleValueToJS((null, "5$"), "number") returns ("null", "'5$'")
+ *    singleValueToJS(false, "boolean") returns "false"
+ *    singleValueToJS([5, "5$"], "number") returns ["5", "'5$'"]
+ *    singleValueToJS([null, "5$"], "number") returns ["null", "'5$'"]
  *
- * Raises:
- *   DataTableException: The value and type did not match in a not-recoverable
- *                       way, for example given value 'abc' for type 'number'.
+ * Throws an exception if the value and type did not match in a non-recoverable
+ * way, for example given value 'abc' for type 'number'.
  */
 DataTable.singleValueToJS = function(value, type, escapeFn) {
 	if( arguments.length < 3 ) { escapeFn = DataTable._escapeValue; }
@@ -912,7 +879,7 @@ DataTable.singleValueToJS = function(value, type, escapeFn) {
  *   description: a column description in the possible formats:
  *    'id'
  *    ['id',]
- *    ['id', 'type')
+ *    ['id', 'type']
  *    ['id', 'type', 'label']
  *    ['id', 'type', 'label', {custom_prop1: 'custom_val1'}]
  * Returns:
@@ -923,9 +890,8 @@ DataTable.singleValueToJS = function(value, type, escapeFn) {
  *     - If custom properties are not given, an empty object is used by
  *       default.
  *
- * Raises:
- *   DataTableException: The column description did not match the RE, or
- *       unsupported type was passed.
+ * Throws an exception if the column description did not match the RE, or
+ * an unsupported type was passed.
  */
 DataTable.columnTypeParser = function(description) {
 	var _t = DataTable._t;
@@ -986,17 +952,17 @@ DataTable.columnTypeParser = function(description) {
  * Parses the table_description object for internal use.
  *
  * Parses the user-submitted table description into an internal format used
- * by the Python DataTable class. Returns the flat list of parsed columns.
-
+ * by the DataTable object. Returns a flat array of parsed columns.
+ *
  * Args:
- *   table_description: A description of the table which should comply
- *                      with one of the formats described below.
+ *   tableDescription: A description of the table which should comply
+ *                     with one of the formats described below.
  *   depth: Optional. The depth of the first level in the current description.
  *          Used by recursive calls to this function.
  *
  * Returns:
- *   List of columns, where each column represented by a dictionary with the
- *   keys: id, label, type, depth, container which means the following:
+ *   List of columns, where each column is represented by an object with the
+ *   properties: id, label, type, depth, container which means the following:
  *   - id: the id of the column
  *   - name: The name of the column
  *   - type: The datatype of the elements in this column. Allowed types are
@@ -1006,34 +972,33 @@ DataTable.columnTypeParser = function(description) {
  *   - custom_properties: The custom properties for this column.
  *   The returned description is flattened regardless of how it was given.
  *
- * Raises:
- *   DataTableException: Error in a column description or in the description
- *                       structure.
+ * Throws an exception if there is an error in a column description or in the 
+ * description structure.
  *
  * Examples:
  *   A column description can be of the following forms:
  *    'id'
- *    ('id',)
- *    ('id', 'type')
- *    ('id', 'type', 'label')
- *    ('id', 'type', 'label', {'custom_prop1': 'custom_val1'})
- *    or as a dictionary:
- *    'id': 'type'
- *    'id': ('type',)
- *    'id': ('type', 'label')
- *    'id': ('type', 'label', {'custom_prop1': 'custom_val1'})
+ *    ['id',]
+ *    ['id', 'type']
+ *    ['id', 'type', 'label']
+ *    ['id', 'type', 'label', {'custom_prop1': 'custom_val1'}]
+ *    or as an object:
+ *    {'id': 'type'}
+ *    {'id': ['type',]}
+ *    {'id': ['type', 'label']}
+ *    {'id': ['type', 'label', {'custom_prop1': 'custom_val1'}]}
  *   If the type is not specified, we treat it as string.
  *   If no specific label is given, the label is simply the id.
  *   If no custom properties are given, we use an empty dictionary.
  *
- *   input: [('a', 'date'), ('b', 'timeofday', 'b', {'foo': 'bar'})]
+ *   input: [['a', 'date'], ['b', 'timeofday', 'b', {'foo': 'bar'}]]
  *   output: [{'id': 'a', 'label': 'a', 'type': 'date',
  *             'depth': 0, 'container': 'iter', 'custom_properties': {}},
  *            {'id': 'b', 'label': 'b', 'type': 'timeofday',
  *             'depth': 0, 'container': 'iter',
  *             'custom_properties': {'foo': 'bar'}}]
  *
- *   input: {'a': [('b', 'number'), ('c', 'string', 'column c')]}
+ *   input: {'a': [['b', 'number'], ['c', 'string', 'column c']]}
  *   output: [{'id': 'a', 'label': 'a', 'type': 'string',
  *             'depth': 0, 'container': 'dict', 'custom_properties': {}},
  *            {'id': 'b', 'label': 'b', 'type': 'number',
@@ -1041,20 +1006,7 @@ DataTable.columnTypeParser = function(description) {
  *            {'id': 'c', 'label': 'column c', 'type': 'string',
  *             'depth': 1, 'container': 'iter', 'custom_properties': {}}]
  *
- *   input:  {('a', 'number', 'column a'): { 'b': 'number', 'c': 'string'}}
- *   output: [{'id': 'a', 'label': 'column a', 'type': 'number',
- *             'depth': 0, 'container': 'dict', 'custom_properties': {}},
- *            {'id': 'b', 'label': 'b', 'type': 'number',
- *             'depth': 1, 'container': 'dict', 'custom_properties': {}},
- *            {'id': 'c', 'label': 'c', 'type': 'string',
- *             'depth': 1, 'container': 'dict', 'custom_properties': {}}]
- *    input: { ('w', 'string', 'word'): ('c', 'number', 'count') }
- *    output: [{'id': 'w', 'label': 'word', 'type': 'string',
- *             'depth': 0, 'container': 'dict', 'custom_properties': {}},
- *            {'id': 'c', 'label': 'count', 'type': 'number',
- *             'depth': 1, 'container': 'scalar', 'custom_properties': {}}]
- *
- *   input: {'a': ('number', 'column a'), 'b': ('string', 'column b')}
+ *   input: {'a': ['number', 'column a'), 'b': ['string', 'column b']}
  *   output: [{'id': 'a', 'label': 'column a', 'type': 'number', 'depth': 0,
  *            'container': 'dict', 'custom_properties': {}},
  *            {'id': 'b', 'label': 'column b', 'type': 'string', 'depth': 0,
@@ -1062,21 +1014,17 @@ DataTable.columnTypeParser = function(description) {
  *
  *   NOTE: there might be ambiguity in the case of a dictionary representation
  *   of a single column. For example, the following description can be parsed
- *   in 2 different ways: {'a': ('b', 'c')} can be thought of a single column
+ *   in 2 different ways: {'a': ['b', 'c']} can be thought of a single column
  *   with the id 'a', of type 'b' and the label 'c', or as 2 columns: one named
  *   'a', and the other named 'b' of type 'c'. We choose the first option by
- *   default, and in case the second option is the right one, it is possible to
- *   make the key into a tuple (i.e. {('a',): ('b', 'c')}) or add more info
- *   into the tuple, thus making it look like this: {'a': ('b', 'c', 'b', {})}
- *   -- second 'b' is the label, and {} is the custom properties field.
+ *   default.
  */
 DataTable.tableDescriptionParser = function(tableDescription, depth) {
 	if( arguments.length < 2 ) { depth = 0; }
 	var _t = DataTable._t;
 	var _o = DataTable._o;
 
-	// For the recursion step, we check for a string or an array of strings
-	// which are assumed to not be column definitions
+	// For the recursion step, we check for a column definition
 	if( DataTable._isColumnDesc(tableDescription) ) {
 		var parsedCol = DataTable.columnTypeParser(tableDescription);
 		parsedCol.depth = depth;
@@ -1121,7 +1069,7 @@ DataTable.tableDescriptionParser = function(tableDescription, depth) {
 		// This is the most inner object. Parsing types.
 		columns = [];
 		for( var i in tableDescription ) {
-			// We parse the column type as (key, type) or (key, type, label)
+			// We parse the column type as [key, type] or [key, type, label]
 			// using columnTypeParser.
 			var parsedCol = {};
 			if( _t.isArray(tableDescription[i]) ) {
@@ -1137,7 +1085,7 @@ DataTable.tableDescriptionParser = function(tableDescription, depth) {
 		return columns;
 	}
 
-	// This is an outer dictionary, must have at most one key.
+	// This is an outer object, must have at most one key.
 	var parsedCol = DataTable.columnTypeParser(_o.prop(tableDescription)[0]);
 	parsedCol.depth = depth;
 	parsedCol.container = 'dict';
@@ -1160,7 +1108,7 @@ DataTable._escapeValue = function(v) {
 	return q+result+q;
 };
 
-// Escapes the custom properties dictionary.
+// Escapes the custom properties object.
 DataTable._escapeCustomProperties = function(properties) {
 	l = [];
 	for( var key in properties ) {

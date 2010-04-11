@@ -113,7 +113,7 @@ test('DataTable.singleValueToJS()',function(){
 
 	// UNSUPPORTED: The Javascript version does not support arrays for timeofday values
 	// arrays are used in place of tuples for value formatting and custom
-	// colomn parameters
+	// column parameters
 	//equal(DataTable.singleValueToJS([10,11,12] , 'timeofday'),'[10,11,12]');
 	equal(DataTable.singleValueToJS(new Date(2010, 1, 2, 3, 4, 5), 'timeofday'), '[3,4,5]'
 		,'timeofday Date object');
