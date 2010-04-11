@@ -1,16 +1,36 @@
 {
 	"name": "gvisdata",
-	"author": {
-		"name": "Rob Burns",
-		"email": "rburns@paiges.net",
-		"url": "http://rburns.paiges.net/"
+	"description": "A module for producing data for use with the Google Visualization Data API. This module is a port of the Python library of the same purpose, provided by Google. http://code.google.com/p/google-visualization-python/",
+	"keywords": ["Google", "visualization", "datatable", "datasource"],
+	"homepage": "http://github.com/rburns/gvisdata",
+	"maintainers": [
+		{
+			"name": "Rob Burns",
+			"email": "rburns@paiges.net",
+			"web": "http://rburns.paiges.net/"
+		}
+	],
+	"contributors": [
+		{ "name": "Amit Weinstein" 	},
+		{ "name": "Misha Seltzer" }
+	],
+	"bugs": {
+		"mail": "rburns@paiges.net",
+		"web": "http://github.com/rburns/gvisdata/issues"
 	},
-	"url": "http://github.com/rburns/gdatasource",
-	"license": {
-		"name": "Apache 2.0",
-		"url": "http://www.apache.org/licenses/LICENSE-2.0"
-	},
-	"description": "A Google data source module for use in the node.js environment. This module is a port of the Python library of the same purpose, provided by Google. http://code.google.com/p/google-visualization-python/",
-	"keywords": [ "google data source", "node.js"],
-	"lib": "gvisdata"
+	"licenses": [
+		{
+			"name": "Apache 2.0",
+			"url": "http://www.apache.org/licenses/LICENSE-2.0"
+		}
+	],
+	"repositories: [
+		{
+           "type": "git",
+           "url": "git://github.com/rburns/gvisdata.git" 
+		} 
+	],
+	"dependencies": [],
+	"engine": ["node", "v8"],
+	"implements": ["CommonJS/Modules/1.0"]
 }
