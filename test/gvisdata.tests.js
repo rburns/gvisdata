@@ -4,7 +4,7 @@
 
 var
 qunit = require('./qunit'),
-gvisdata = require('./gvisdata');
+gvisdata = require('../lib/gvisdata');
 
 /**
  * global definitions
