@@ -369,7 +369,6 @@ test('toJSCode',function(){
 
 test('toJSON',function(){
 	// The json of the initial data we load to the table.
-	// FIXME this json is invalid
 	var init_data_json = ("{cols:"+
 		"[{id:'a',label:'A',type:'number'},"+
 		"{id:'b',label:'b',type:'string'},"+
@@ -409,7 +408,6 @@ test('toJSON',function(){
 	//	"{v:new Date(1,1,3,4,5,6)}]},"+
 	//	"{c:[,{v:new Date(3,3,5)},{v:null}]}]}",'');
 
-	// FIXME this json is invalid
 	var json = ("{cols:[{id:\"a'\",label:\"a'\",type:'string'},"+
 		"{id:'b',label:\"bb'\",type:'number'}],"+
 		"rows:[{c:[{v:'a1'},{v:1}]},{c:[{v:'a2'},{v:2}]},"+
@@ -422,7 +420,6 @@ test('toJSON',function(){
 
 test('custom properties',function(){
 	// The json of the initial data we load to the table.
-	// FIXME this json is invalid
 	var json = ("{cols:"+
 		"[{id:'a',label:'A',type:'number',p:{'col_cp':'col_v'}},"+
 		"{id:'b',label:'b',type:'string'},"+
@@ -491,7 +488,7 @@ test('toTSVExcel',function(){
 	//                new Date(2, 3, 4): [[new Date(2,3,4,2, 3, 4), 'time "2 3 4"'],
 	//                                 new Date(1, 2, 3, 4, 5, 6)],
 	//                new Date(3, 4, 5): []})
-	//equal(table.toTSVExcel(),table.toCSV().replace(", ", "\t")/*.encode("UTF-16LE")*/);
+	//equal(table.toTSVExcel(),table.toCSV().replace(", ", "\t"));
 });
 
 test('toHTML',function(){
@@ -548,9 +545,9 @@ test('orderBy',function(){
 	
 	var third = DataTable._o.clone(data);
 	var diffSorted = new DataTable(description,third.sort(function(a,b){
-		return 	a[1] == b[1] ? 0 : a[1] > b[1] ? -1 : 1;	
+		return 	a[1] == b[1] ? 0 : a[0] > b[0] ? -1 : 1;
 	}).sort(function(a,b){
-		return 	a[0] == b[0] ? 0 : a[0] > b[0] ? -1 : 1;	
+		return 	a[0] == b[0] ? 0 : a[1] > b[1] ? -1 : 1;
 	}));
 
 	equal(table.toJSON(null,['col2', 'col1']), numSorted.toJSON());
@@ -615,9 +612,9 @@ test('toResponse',function(){
 		'Raises exception on invalid format');
 });
 
-/**
- * The following tests are not part of the gv-python test suite
- */
+//
+//The following tests are not part of the gv-python test suite
+//
  
 test('DataTable.singleValueToJS - extra',function(){
 	equal(DataTable.singleValueToJS('<<','string'),"'<<'",'< is not escaped');
@@ -707,5 +704,6 @@ test('object enhancement', function(){
 	deepEqual(obj1, {a: 'x', b: 'y', c: ['a','b','c'], d: {a: 1, b: 2}}
 		,'changes don\'t alter the source');	
 });
+
 
 
